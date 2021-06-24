@@ -28,14 +28,6 @@ namespace BlazorSimpleSVG
         public string TranslateY(double y) => (y_offset + (y * zoom)).ToStringInvariant();
         public double Size(double i) => i * zoom;
         public string Size_s(double i) => (i * zoom).ToStringInvariant();
-        public string GetG(double x, double y)
-        {
-            string clip_path = "";
-            if (!string.IsNullOrEmpty(clip_name))
-                clip_path = $"clip-path='url(#{clip_name})' ";
-            string result = $"<g {clip_path}transform='translate({TranslateX(x)},{TranslateY(y)})'>";
-            return result;
-        }
     }
 
     public class SVGObject
@@ -67,10 +59,14 @@ namespace BlazorSimpleSVG
 
         public override string GetSVG(SVGContext context)
         {
-            // var tmp = $"{context.GetG(left, top)}<rect x='100' y='100' width='{context.SizeXs(right - left)}' height='{context.SizeYs(bottom - top)}' fill='{fill}' fill-opacity='{fill_opacity}' stroke='{color}' stroke-width='1'/></g>";
             var tmp = $"<rect {GetId()} x='{context.TranslateX(left)}' y='{context.TranslateY(top)}' width='{context.Size_s(right - left)}' height='{context.Size_s(bottom - top)}' fill='{fill}' fill-opacity='{fill_opacity}' stroke='{color}' stroke-width='1'/>";
-            Console.WriteLine(tmp);
+            // Console.WriteLine(tmp);
             return tmp;
+        }
+
+        public override string ToString()
+        {
+            return System.Text.Json.JsonSerializer.Serialize(this, new System.Text.Json.JsonSerializerOptions() { IncludeFields = true });
         }
     }
 

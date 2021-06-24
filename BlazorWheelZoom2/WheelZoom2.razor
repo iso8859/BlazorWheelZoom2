@@ -4,12 +4,12 @@
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
-<div @ref="divElement" style="position:relative;"
+<div @ref="divElement" style="position:relative;" 
      @onpointerdown=PointerDown @onpointerdown:preventDefault @onpointerdown:stopPropagation
      @onpointerup=PointerUp @onpointerup:preventDefault @onpointerup:stopPropagation
      @oncontextmenu="()=> { }" @oncontextmenu:preventDefault
      @onpointermove=PointerMove @onpointermove:preventDefault
-     @onwheel=OnWheel @onwheel:stopPropagation @onwheel:preventDefault>
+     @onwheel=Wheel @onwheel:stopPropagation @onwheel:preventDefault>
 
     <SimpleSVG SvgId="bwz" Objects="@Objects" Context="@Context" Width="@Width" Height="@Height" />
 </div>
@@ -38,6 +38,9 @@
         Objects.Add(Image);
         drawingRect = new SVGRectangle() { visible = false };
         Objects.Add(drawingRect);
+
+        SVGContext test = new SVGContext() { x_offset = -10, y_offset = -10 };
+        double x = test.ScreenToViewX(5);
     }
 
     private IJSObjectReference module;
@@ -67,14 +70,14 @@
             await module.DisposeAsync();
     }
 
-    Task OnWheel(WheelEventArgs e)
+    Task Wheel(WheelEventArgs e)
     {
         if (e.DeltaY > 0)
             Context.zoom /= 1.1;
         else if (e.DeltaY < 0)
             Context.zoom *= 1.1;
         Context.zoom = Math.Max(0.1, Math.Min(10, Context.zoom));
-        Context.x_offset = Context.Clip(Context.x_offset, (svgRect.right-svgRect.left) - Context.Size(Image.right));
+        Context.x_offset = Context.Clip(Context.x_offset, (svgRect.right - svgRect.left) - Context.Size(Image.right));
         Context.y_offset = Context.Clip(Context.y_offset, (svgRect.bottom - svgRect.top) - Context.Size(Image.bottom));
         StateHasChanged();
         return Task.CompletedTask;
@@ -84,35 +87,43 @@
     double mouseDownX, mouseDownY;
     double mouseDownImageX, mouseDownImageY;
 
-    bool rectangle = false;
     async Task PointerDown(PointerEventArgs e)
     {
-        if (e.Button == 0 || e.Button == 2)
+        //Console.WriteLine("PointerDown {0}", System.Text.Json.JsonSerializer.Serialize(e));
+
+        if (mouseDown == -1)
         {
-            mouseDown = e.Button;
-            mouseDownX = e.ClientX;
-            mouseDownY = e.ClientY;
-            mouseDownImageX = Context.x_offset;
-            mouseDownImageY = Context.y_offset;
-            await module.InvokeVoidAsync("capturePointer", divElement, e.PointerId);
+            if (e.Button == 0 || e.Button == 2)
+            {
+                mouseDown = e.Button;
+                mouseDownX = e.OffsetX;
+                mouseDownY = e.OffsetY;
+                mouseDownImageX = Context.x_offset;
+                mouseDownImageY = Context.y_offset;
+                await module.InvokeVoidAsync("capturePointer", divElement, e.PointerId);
+            }
+            if (e.Button == 2)
+            {
+                drawingRect.left = Context.ScreenToViewX(e.OffsetX);
+                drawingRect.top = Context.ScreenToViewY(e.OffsetY);
+                drawingRect.right = drawingRect.left + 1;
+                drawingRect.bottom = drawingRect.top + 1;
+                drawingRect.color = "red";
+                drawingRect.fill = "lightgreen";
+                drawingRect.fill_opacity = "50%";
+                drawingRect.visible = true;
+
+                StateHasChanged();
+            }
         }
-        if (e.Button==2)
-        {
-            drawingRect.left = Context.ScreenToViewX(e.ClientX - svgRect.left);
-            drawingRect.top = Context.ScreenToViewY(e.ClientY - svgRect.top);
-            drawingRect.right = drawingRect.left + 1;
-            drawingRect.bottom = drawingRect.top + 1;
-            drawingRect.color = "red";
-            drawingRect.fill = "lightgreen";
-            drawingRect.fill_opacity = "50%";
-            drawingRect.visible = true;
-            StateHasChanged();
-        }
+        else
+            PointerMove(e);
     }
 
     async Task PointerUp(PointerEventArgs e)
     {
-        if (mouseDown==2)
+        //Console.WriteLine("PointerUp {0}", System.Text.Json.JsonSerializer.Serialize(e));
+        if (mouseDown == 2)
         {
             drawingRect = new SVGRectangle() { visible = false };
             Objects.Add(drawingRect);
@@ -123,18 +134,17 @@
 
     void PointerMove(PointerEventArgs e)
     {
-        //double px = Context.ScreenToViewX(e.ClientX - svgRect.left);
-        //double py = Context.ScreenToViewY(e.ClientY - svgRect.top);
-        //Console.WriteLine($"{px};{py}");
+
         if (mouseDown == 0)
         {
-            Context.x_offset = Context.Clip(mouseDownImageX + e.ClientX - mouseDownX, (svgRect.right - svgRect.left) - Context.Size(Image.right));
-            Context.y_offset = Context.Clip(mouseDownImageY + e.ClientY - mouseDownY, (svgRect.bottom - svgRect.top) - Context.Size(Image.bottom));
+            Context.x_offset = Context.Clip(mouseDownImageX + e.OffsetX - mouseDownX, (svgRect.right - svgRect.left) - Context.Size(Image.right));
+            Context.y_offset = Context.Clip(mouseDownImageY + e.OffsetY - mouseDownY, (svgRect.bottom - svgRect.top) - Context.Size(Image.bottom));
         }
         else if (mouseDown == 2)
         {
-            drawingRect.right = Context.ScreenToViewX(mouseDownImageX + e.ClientX - svgRect.left - mouseDownX - svgRect.left);
-            drawingRect.bottom = Context.ScreenToViewY(mouseDownImageY + e.ClientY - svgRect.top - mouseDownY - svgRect.top);
+            drawingRect.right = drawingRect.left + Context.ScreenToViewX(mouseDownImageX + e.OffsetX - mouseDownX);
+            drawingRect.bottom = drawingRect.top + Context.ScreenToViewY(mouseDownImageY + e.OffsetY - mouseDownY);
+            //Console.WriteLine("PointerMove {0};{1};{2}", e.OffsetX - mouseDownX, Context.ScreenToViewX(e.OffsetX - mouseDownX), drawingRect);
         }
         StateHasChanged();
     }
