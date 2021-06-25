@@ -60,7 +60,7 @@ namespace BlazorSimpleSVG
         public override string GetSVG(SVGContext context)
         {
             var tmp = $"<rect {GetId()} x='{context.TranslateX(left)}' y='{context.TranslateY(top)}' width='{context.Size_s(right - left)}' height='{context.Size_s(bottom - top)}' fill='{fill}' fill-opacity='{fill_opacity}' stroke='{color}' stroke-width='1'/>";
-            // Console.WriteLine(tmp);
+            //Console.WriteLine(tmp);
             return tmp;
         }
 

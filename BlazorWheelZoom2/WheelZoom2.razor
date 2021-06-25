@@ -1,10 +1,9 @@
 ﻿@using BlazorSimpleSVG
 @using Microsoft.JSInterop
-@using System.Drawing;
+@using System.Threading;
 @inject IJSRuntime JSRuntime
-@implements IAsyncDisposable
 
-<div @ref="divElement" style="position:relative;" 
+<div @ref="divElement" style="position:relative;width:@Width;height:@Height;"
      @onpointerdown=PointerDown @onpointerdown:preventDefault @onpointerdown:stopPropagation
      @onpointerup=PointerUp @onpointerup:preventDefault @onpointerup:stopPropagation
      @oncontextmenu="()=> { }" @oncontextmenu:preventDefault
@@ -38,21 +37,42 @@
         Objects.Add(Image);
         drawingRect = new SVGRectangle() { visible = false };
         Objects.Add(drawingRect);
-
-        SVGContext test = new SVGContext() { x_offset = -10, y_offset = -10 };
-        double x = test.ScreenToViewX(5);
     }
 
     private IJSObjectReference module;
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+
+    public void Refresh(string img)
     {
-        if (firstRender)
+        ImageUri = img;
+        svgRect = null;
+        Image.href = ImageUri;
+        // imageInfoUpdated = 2;
+        StateHasChanged();
+    }
+
+    //async ValueTask IAsyncDisposable.DisposeAsync()
+    //{
+    //    if (module != null)
+    //        await module.DisposeAsync();
+    //}
+
+    public async Task GetSizes()
+    {
+        if (svgRect == null)
         {
             module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorWheelZoom2/scripts.js");
             var image = await module.InvokeAsync<string>("GetBoundingClientRect", Image.id);
             var jimage = System.Text.Json.JsonDocument.Parse(image);
+            // Always left=0, top=0 => adjust right and bottom
+            Image.left = jimage.RootElement.GetProperty("left").GetDouble();
+            Image.top = jimage.RootElement.GetProperty("top").GetDouble();
             Image.right = jimage.RootElement.GetProperty("right").GetDouble();
             Image.bottom = jimage.RootElement.GetProperty("bottom").GetDouble();
+            Image.right = Image.right - Image.left;
+            Image.left = 0;
+            Image.bottom = Image.bottom - Image.top;
+            Image.top = 0;
+            Console.WriteLine($"Image size = {Image.left.ToStringInvariant()};{Image.top.ToStringInvariant()};{Image.right.ToStringInvariant()};{Image.bottom.ToStringInvariant()}");
             var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>("GetBoundingClientRect", "bwz"));
             svgRect = new SVGRectangle()
             {
@@ -61,26 +81,21 @@
                 right = svg.RootElement.GetProperty("right").GetDouble(),
                 bottom = svg.RootElement.GetProperty("bottom").GetDouble()
             };
+            Console.WriteLine($"SVG size = {svgRect.left.ToStringInvariant()};{svgRect.top.ToStringInvariant()};{svgRect.right.ToStringInvariant()};{svgRect.bottom.ToStringInvariant()}");
         }
     }
 
-    async ValueTask IAsyncDisposable.DisposeAsync()
+    async Task Wheel(WheelEventArgs e)
     {
-        if (module != null)
-            await module.DisposeAsync();
-    }
-
-    Task Wheel(WheelEventArgs e)
-    {
+        await GetSizes();
         if (e.DeltaY > 0)
             Context.zoom /= 1.1;
         else if (e.DeltaY < 0)
             Context.zoom *= 1.1;
         Context.zoom = Math.Max(0.1, Math.Min(10, Context.zoom));
-        Context.x_offset = Context.Clip(Context.x_offset, (svgRect.right - svgRect.left) - Context.Size(Image.right));
-        Context.y_offset = Context.Clip(Context.y_offset, (svgRect.bottom - svgRect.top) - Context.Size(Image.bottom));
+        Context.x_offset = Context.Clip(Context.x_offset, (svgRect.right - svgRect.left) - Context.Size(Image.right - Image.left));
+        Context.y_offset = Context.Clip(Context.y_offset, (svgRect.bottom - svgRect.top) - Context.Size(Image.bottom - Image.top));
         StateHasChanged();
-        return Task.CompletedTask;
     }
 
     long mouseDown = -1;
@@ -89,8 +104,7 @@
 
     async Task PointerDown(PointerEventArgs e)
     {
-        //Console.WriteLine("PointerDown {0}", System.Text.Json.JsonSerializer.Serialize(e));
-
+        await GetSizes();
         if (mouseDown == -1)
         {
             if (e.Button == 0 || e.Button == 2)
@@ -117,7 +131,7 @@
             }
         }
         else
-            PointerMove(e);
+            await PointerMove(e);
     }
 
     async Task PointerUp(PointerEventArgs e)
@@ -132,13 +146,13 @@
         await module.InvokeVoidAsync("releasePointer", divElement, e.PointerId);
     }
 
-    void PointerMove(PointerEventArgs e)
+    async Task PointerMove(PointerEventArgs e)
     {
-
+        await GetSizes();
         if (mouseDown == 0)
         {
-            Context.x_offset = Context.Clip(mouseDownImageX + e.OffsetX - mouseDownX, (svgRect.right - svgRect.left) - Context.Size(Image.right));
-            Context.y_offset = Context.Clip(mouseDownImageY + e.OffsetY - mouseDownY, (svgRect.bottom - svgRect.top) - Context.Size(Image.bottom));
+            Context.x_offset = Context.Clip(mouseDownImageX + e.OffsetX - mouseDownX, (svgRect.right - svgRect.left) - Context.Size(Image.right - Image.left));
+            Context.y_offset = Context.Clip(mouseDownImageY + e.OffsetY - mouseDownY, (svgRect.bottom - svgRect.top) - Context.Size(Image.bottom - Image.top));
         }
         else if (mouseDown == 2)
         {
