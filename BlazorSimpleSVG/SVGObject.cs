@@ -22,6 +22,12 @@ namespace BlazorSimpleSVG
             return Math.Min(0, Math.Max(i, minOffset));
         }
 
+        public void Reset()
+        {
+            x_offset = y_offset = 0;
+            zoom = 1;
+        }
+
         public double ScreenToViewX(double i) => (i - x_offset) / zoom;
         public double ScreenToViewY(double i) => (i - y_offset) / zoom;
         public string TranslateX(double x) => (x_offset + (x * zoom)).ToStringInvariant();

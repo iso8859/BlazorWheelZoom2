@@ -45,6 +45,7 @@
     {
         ImageUri = img;
         svgRect = null;
+        // Context.Reset();
         Image.href = ImageUri;
         // imageInfoUpdated = 2;
         StateHasChanged();
@@ -68,9 +69,9 @@
             Image.top = jimage.RootElement.GetProperty("top").GetDouble();
             Image.right = jimage.RootElement.GetProperty("right").GetDouble();
             Image.bottom = jimage.RootElement.GetProperty("bottom").GetDouble();
-            Image.right = Image.right - Image.left;
+            Image.right = (Image.right - Image.left)/Context.zoom;
             Image.left = 0;
-            Image.bottom = Image.bottom - Image.top;
+            Image.bottom = (Image.bottom - Image.top)/Context.zoom;
             Image.top = 0;
             Console.WriteLine($"Image size = {Image.left.ToStringInvariant()};{Image.top.ToStringInvariant()};{Image.right.ToStringInvariant()};{Image.bottom.ToStringInvariant()}");
             var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>("GetBoundingClientRect", "bwz"));
