@@ -2,6 +2,7 @@
 @using Microsoft.JSInterop
 @using System.Threading;
 @inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
 <div @ref="divElement" style="position:relative;width:@Width;height:@Height;"
      @onpointerdown=PointerDown @onpointerdown:preventDefault @onpointerdown:stopPropagation
@@ -10,7 +11,16 @@
      @onpointermove=PointerMove @onpointermove:preventDefault
      @onwheel=Wheel @onwheel:stopPropagation @onwheel:preventDefault>
 
-    <SimpleSVG SvgId="bwz" Objects="@Objects" Context="@Context" Width="@Width" Height="@Height" />
+    @{ 
+        Objects = new List<SVGObject>();
+        if (Image != null)
+            Objects.Add(Image);
+        if (RectangleList != null)
+            Objects.AddRange(RectangleList);
+        if (drawingRect != null)
+            Objects.Add(drawingRect);
+    }
+    <SimpleSVG SvgId="bwz" Objects="@Objects" Context="@Context" Width="100%" Height="100%" />
 </div>
 
 @code
@@ -23,6 +33,12 @@
     public string Width { get; set; } = "100px";
     [Parameter]
     public string Height { get; set; } = "100px";
+    [Parameter]
+    public EventCallback<SVGRectangle> NewRectangle { get; set; }
+    [Parameter]
+    public SVGRectangle NewRectangleTemplate { get; set; } = new SVGRectangle() { color = "red", fill = "lightgray", fill_opacity = "50%" };
+    [Parameter]
+    public List<SVGRectangle> RectangleList { get; set; }
 
     SVGContext Context = new SVGContext();
     List<SVGObject> Objects = new List<SVGObject>();
@@ -51,17 +67,24 @@
         StateHasChanged();
     }
 
-    //async ValueTask IAsyncDisposable.DisposeAsync()
-    //{
-    //    if (module != null)
-    //        await module.DisposeAsync();
-    //}
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        if (module != null)
+            await module.DisposeAsync();
+        module = null;
+    }
+
+    public async Task LoadJSModule()
+    {
+        if (module == null)
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorWheelZoom2/scripts.js");
+    }
 
     public async Task GetSizes()
     {
         if (svgRect == null)
         {
-            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorWheelZoom2/scripts.js");
+            await LoadJSModule();
             var image = await module.InvokeAsync<string>("GetBoundingClientRect", Image.id);
             var jimage = System.Text.Json.JsonDocument.Parse(image);
             // Always left=0, top=0 => adjust right and bottom
@@ -115,6 +138,7 @@
                 mouseDownY = e.OffsetY;
                 mouseDownImageX = Context.x_offset;
                 mouseDownImageY = Context.y_offset;
+                await LoadJSModule();
                 await module.InvokeVoidAsync("capturePointer", divElement, e.PointerId);
             }
             if (e.Button == 2)
@@ -123,9 +147,9 @@
                 drawingRect.top = Context.ScreenToViewY(e.OffsetY);
                 drawingRect.right = drawingRect.left + 1;
                 drawingRect.bottom = drawingRect.top + 1;
-                drawingRect.color = "red";
-                drawingRect.fill = "lightgreen";
-                drawingRect.fill_opacity = "50%";
+                drawingRect.color = NewRectangleTemplate.color;
+                drawingRect.fill = NewRectangleTemplate.fill;
+                drawingRect.fill_opacity = NewRectangleTemplate.fill_opacity;
                 drawingRect.visible = true;
 
                 StateHasChanged();
@@ -140,10 +164,14 @@
         //Console.WriteLine("PointerUp {0}", System.Text.Json.JsonSerializer.Serialize(e));
         if (mouseDown == 2)
         {
+            if (NewRectangle.HasDelegate)
+                await NewRectangle.InvokeAsync(drawingRect);
+            Objects.Remove(drawingRect);
             drawingRect = new SVGRectangle() { visible = false };
             Objects.Add(drawingRect);
         }
         mouseDown = -1;
+        await LoadJSModule();
         await module.InvokeVoidAsync("releasePointer", divElement, e.PointerId);
     }
 
