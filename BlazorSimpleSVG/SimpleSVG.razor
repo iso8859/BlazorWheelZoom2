@@ -1,12 +1,15 @@
 ﻿@if (Objects != null && Context != null)
 {
     <div style="position: absolute; top: 0; left: 0; width: @(Width); height: @(Height);">
-        <svg id="@SvgId" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" >
+        <svg id="@SvgId" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%">
             <defs>
                 <clipPath id="@Context.clip_name">
                     <rect width="100%" height="100%" />
                 </clipPath>
             </defs>
+            @{
+                CheckVisible();
+            }
             @foreach (var obj in Objects)
             {
                 @if (obj.visible)
@@ -28,5 +31,15 @@
     public List<SVGObject> Objects { get; set; }
     [Parameter]
     public SVGContext Context { get; set; }
+
+    public void CheckVisible()
+    {
+        var objToCheck = Objects.Find(_ => _.scrollIntoView == true);
+        if (objToCheck!=null)
+        {
+            Context.EnsureIsVisible(objToCheck.rect);
+            objToCheck.scrollIntoView = false;
+        }
+    }
 
 }

@@ -18,7 +18,7 @@
         if (RectangleList != null)
             Objects.AddRange(RectangleList);
         if (drawingRect != null)
-            Objects.Add(drawingRect);
+            Objects.Add(drawingRect);        
     }
     <SimpleSVG SvgId="bwz" Objects="@Objects" Context="@Context" Width="100%" Height="100%" />
 </div>
@@ -43,7 +43,6 @@
     SVGContext Context = new SVGContext();
     List<SVGObject> Objects = new List<SVGObject>();
     SVGImage Image;
-    SVGRectangle svgRect;
     SVGRectangle drawingRect;
 
     protected override void OnInitialized()
@@ -55,12 +54,17 @@
         Objects.Add(drawingRect);
     }
 
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        return GetSizesAsync();
+    }
+
     private IJSObjectReference module;
 
     public void Refresh(string img)
     {
         ImageUri = img;
-        svgRect = null;
+        Context.viewSize = null;
         // Context.Reset();
         Image.href = ImageUri;
         // imageInfoUpdated = 2;
@@ -80,45 +84,45 @@
             module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorWheelZoom2/scripts.js");
     }
 
-    public async Task GetSizes()
+    public async Task GetSizesAsync()
     {
-        if (svgRect == null)
+        if (Context.viewSize == null)
         {
             await LoadJSModule();
             var image = await module.InvokeAsync<string>("GetBoundingClientRect", Image.id);
             var jimage = System.Text.Json.JsonDocument.Parse(image);
             // Always left=0, top=0 => adjust right and bottom
-            Image.left = jimage.RootElement.GetProperty("left").GetDouble();
-            Image.top = jimage.RootElement.GetProperty("top").GetDouble();
-            Image.right = jimage.RootElement.GetProperty("right").GetDouble();
-            Image.bottom = jimage.RootElement.GetProperty("bottom").GetDouble();
-            Image.right = (Image.right - Image.left)/Context.zoom;
-            Image.left = 0;
-            Image.bottom = (Image.bottom - Image.top)/Context.zoom;
-            Image.top = 0;
-            Console.WriteLine($"Image size = {Image.left.ToStringInvariant()};{Image.top.ToStringInvariant()};{Image.right.ToStringInvariant()};{Image.bottom.ToStringInvariant()}");
+            Image.rect.left = jimage.RootElement.GetProperty("left").GetDouble();
+            Image.rect.top = jimage.RootElement.GetProperty("top").GetDouble();
+            Image.rect.right = jimage.RootElement.GetProperty("right").GetDouble();
+            Image.rect.bottom = jimage.RootElement.GetProperty("bottom").GetDouble();
+            Image.rect.right = Image.rect.width/Context.zoom;
+            Image.rect.left = 0;
+            Image.rect.bottom = Image.rect.height/Context.zoom;
+            Image.rect.top = 0;
             var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>("GetBoundingClientRect", "bwz"));
-            svgRect = new SVGRectangle()
+            Context.viewSize = new rect()
             {
                 left = svg.RootElement.GetProperty("left").GetDouble(),
                 top = svg.RootElement.GetProperty("top").GetDouble(),
                 right = svg.RootElement.GetProperty("right").GetDouble(),
                 bottom = svg.RootElement.GetProperty("bottom").GetDouble()
             };
-            Console.WriteLine($"SVG size = {svgRect.left.ToStringInvariant()};{svgRect.top.ToStringInvariant()};{svgRect.right.ToStringInvariant()};{svgRect.bottom.ToStringInvariant()}");
+            Context.areaSize = new rect(0, 0, Image.rect.width, Image.rect.height);
+            // Console.WriteLine($"SVG size = {Context.viewSize.left.ToStringInvariant()};{Context.viewSize.top.ToStringInvariant()};{Context.viewSize.right.ToStringInvariant()};{Context.viewSize.bottom.ToStringInvariant()}");
         }
     }
 
     async Task Wheel(WheelEventArgs e)
     {
-        await GetSizes();
+        await GetSizesAsync();
         if (e.DeltaY > 0)
             Context.zoom /= 1.1;
         else if (e.DeltaY < 0)
             Context.zoom *= 1.1;
         Context.zoom = Math.Max(0.1, Math.Min(10, Context.zoom));
-        Context.x_offset = Context.Clip(Context.x_offset, (svgRect.right - svgRect.left) - Context.Size(Image.right - Image.left));
-        Context.y_offset = Context.Clip(Context.y_offset, (svgRect.bottom - svgRect.top) - Context.Size(Image.bottom - Image.top));
+        Context.x_offset = Context.Clip(Context.x_offset, Context.viewSize.width - Context.Size(Image.rect.width));
+        Context.y_offset = Context.Clip(Context.y_offset, Context.viewSize.height - Context.Size(Image.rect.height));
         StateHasChanged();
     }
 
@@ -128,7 +132,7 @@
 
     async Task PointerDown(PointerEventArgs e)
     {
-        await GetSizes();
+        await GetSizesAsync();
         if (mouseDown == -1)
         {
             if (e.Button == 0 || e.Button == 2)
@@ -143,10 +147,10 @@
             }
             if (e.Button == 2)
             {
-                drawingRect.left = Context.ScreenToViewX(e.OffsetX);
-                drawingRect.top = Context.ScreenToViewY(e.OffsetY);
-                drawingRect.right = drawingRect.left + 1;
-                drawingRect.bottom = drawingRect.top + 1;
+                drawingRect.rect.left = Context.ScreenToViewX(e.OffsetX);
+                drawingRect.rect.top = Context.ScreenToViewY(e.OffsetY);
+                drawingRect.rect.right = drawingRect.rect.left + 1;
+                drawingRect.rect.bottom = drawingRect.rect.top + 1;
                 drawingRect.color = NewRectangleTemplate.color;
                 drawingRect.fill = NewRectangleTemplate.fill;
                 drawingRect.fill_opacity = NewRectangleTemplate.fill_opacity;
@@ -177,17 +181,16 @@
 
     async Task PointerMove(PointerEventArgs e)
     {
-        await GetSizes();
+        await GetSizesAsync();
         if (mouseDown == 0)
         {
-            Context.x_offset = Context.Clip(mouseDownImageX + e.OffsetX - mouseDownX, (svgRect.right - svgRect.left) - Context.Size(Image.right - Image.left));
-            Context.y_offset = Context.Clip(mouseDownImageY + e.OffsetY - mouseDownY, (svgRect.bottom - svgRect.top) - Context.Size(Image.bottom - Image.top));
+            Context.x_offset = Context.Clip(mouseDownImageX + e.OffsetX - mouseDownX, Context.viewSize.width - Context.Size(Image.rect.width));
+            Context.y_offset = Context.Clip(mouseDownImageY + e.OffsetY - mouseDownY, Context.viewSize.height - Context.Size(Image.rect.height));
         }
         else if (mouseDown == 2)
         {
-            drawingRect.right = drawingRect.left + Context.ScreenToViewX(mouseDownImageX + e.OffsetX - mouseDownX);
-            drawingRect.bottom = drawingRect.top + Context.ScreenToViewY(mouseDownImageY + e.OffsetY - mouseDownY);
-            //Console.WriteLine("PointerMove {0};{1};{2}", e.OffsetX - mouseDownX, Context.ScreenToViewX(e.OffsetX - mouseDownX), drawingRect);
+            drawingRect.rect.right = drawingRect.rect.left + Context.ScreenToViewX(mouseDownImageX + e.OffsetX - mouseDownX);
+            drawingRect.rect.bottom = drawingRect.rect.top + Context.ScreenToViewY(mouseDownImageY + e.OffsetY - mouseDownY);
         }
         StateHasChanged();
     }
