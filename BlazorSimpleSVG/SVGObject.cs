@@ -130,7 +130,8 @@ namespace BlazorSimpleSVG
     public class SVGImage : SVGObject
     {
         public string href;
-
+        // https://stackoverflow.com/questions/11390830/is-it-possible-to-listen-image-load-event-in-svg
+        // https://stackoverflow.com/questions/6575159/get-image-dimensions-with-javascript-before-image-has-fully-loaded
         public override string GetSVG(SVGContext context)
         {
             var tmp = $"<image {GetId()} xlink:href='{href}' ";

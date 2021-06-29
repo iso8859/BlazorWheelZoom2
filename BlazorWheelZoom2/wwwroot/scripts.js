@@ -17,3 +17,16 @@ export function GetElementWidth(elid) {
 export function GetElementHeight(elid) {
     return document.getElementById(elid).getBoundingClientRect().height;
 }
+
+//export function GetImageSize(uri) {
+//    var img = document.createElement('img');
+//    img.src = uri;
+//    var poll = setInterval(function () {
+//        if (img.naturalWidth) {
+//            clearInterval(poll);
+//            console.log(img.naturalWidth, img.naturalHeight);
+//        }
+//    }, 10);
+
+//    img.onload = function () { console.log('Fully loaded'); }
+//}

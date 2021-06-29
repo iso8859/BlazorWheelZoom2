@@ -11,14 +11,14 @@
      @onpointermove=PointerMove @onpointermove:preventDefault
      @onwheel=Wheel @onwheel:stopPropagation @onwheel:preventDefault>
 
-    @{ 
+    @{
         Objects = new List<SVGObject>();
         if (Image != null)
             Objects.Add(Image);
         if (RectangleList != null)
             Objects.AddRange(RectangleList);
         if (drawingRect != null)
-            Objects.Add(drawingRect);        
+            Objects.Add(drawingRect);
     }
     <SimpleSVG SvgId="bwz" Objects="@Objects" Context="@Context" Width="100%" Height="100%" />
 </div>
@@ -54,11 +54,6 @@
         Objects.Add(drawingRect);
     }
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
-    {
-        return GetSizesAsync();
-    }
-
     private IJSObjectReference module;
 
     public void Refresh(string img)
@@ -81,7 +76,8 @@
     public async Task LoadJSModule()
     {
         if (module == null)
-            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorWheelZoom2/scripts.js");
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>
+                ("import", "./_content/BlazorWheelZoom2/scripts.js");
     }
 
     public async Task GetSizesAsync()
@@ -89,7 +85,8 @@
         if (Context.viewSize == null)
         {
             await LoadJSModule();
-            var image = await module.InvokeAsync<string>("GetBoundingClientRect", Image.id);
+            var image = await module.InvokeAsync<string>
+                ("GetBoundingClientRect", Image.id);
             var jimage = System.Text.Json.JsonDocument.Parse(image);
             // Always left=0, top=0 => adjust right and bottom
             Image.rect.left = jimage.RootElement.GetProperty("left").GetDouble();
@@ -100,7 +97,8 @@
             Image.rect.left = 0;
             Image.rect.bottom = Image.rect.height/Context.zoom;
             Image.rect.top = 0;
-            var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>("GetBoundingClientRect", "bwz"));
+            var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>
+                ("GetBoundingClientRect", "bwz"));
             Context.viewSize = new rect()
             {
                 left = svg.RootElement.GetProperty("left").GetDouble(),
@@ -112,6 +110,13 @@
             // Console.WriteLine($"SVG size = {Context.viewSize.left.ToStringInvariant()};{Context.viewSize.top.ToStringInvariant()};{Context.viewSize.right.ToStringInvariant()};{Context.viewSize.bottom.ToStringInvariant()}");
         }
     }
+
+    [JSInvokable]
+    public static Task ImageLoaded()
+    {
+        return GetSizesAsync();
+    }
+
 
     async Task Wheel(WheelEventArgs e)
     {
@@ -195,4 +200,4 @@
         StateHasChanged();
     }
 
-}
+                }
