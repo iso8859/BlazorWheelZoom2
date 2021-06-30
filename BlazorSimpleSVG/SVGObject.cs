@@ -74,6 +74,11 @@ namespace BlazorSimpleSVG
             zoom = 1;
         }
 
+        public bool IsValid()
+        {
+            return viewSize != null && areaSize != null;
+        }
+
         public double ScreenToViewX(double i) => (i - x_offset) / zoom;
         public double ScreenToViewY(double i) => (i - y_offset) / zoom;
         public string TranslateX(double x) => (x_offset + (x * zoom)).ToStringInvariant();
@@ -134,19 +139,23 @@ namespace BlazorSimpleSVG
         // https://stackoverflow.com/questions/6575159/get-image-dimensions-with-javascript-before-image-has-fully-loaded
         public override string GetSVG(SVGContext context)
         {
-            var tmp = $"<image {GetId()} xlink:href='{href}' ";
-            if (rect.left.HasValue)
-                tmp += $"x='{context.TranslateX(rect.left.Value)}' "; 
-            if (rect.top.HasValue)
-                tmp += $"y='{context.TranslateY(rect.top.Value)}' ";
-            if (rect.left.HasValue && rect.right.HasValue)
-                tmp += $"width='{context.Size_s(rect.width)}' ";
-            if (rect.top.HasValue && rect.bottom.HasValue)
-                tmp += $"height='{context.Size_s(rect.height)}'";
-            tmp += "/>";
-            //Console.WriteLine(tmp);
-            return tmp;
-
+            if (!string.IsNullOrEmpty(href))
+            {
+                var tmp = $"<image {GetId()} xlink:href='{href}' ";
+                if (rect.left.HasValue)
+                    tmp += $"x='{context.TranslateX(rect.left.Value)}' ";
+                if (rect.top.HasValue)
+                    tmp += $"y='{context.TranslateY(rect.top.Value)}' ";
+                if (rect.left.HasValue && rect.right.HasValue)
+                    tmp += $"width='{context.Size_s(rect.width)}' ";
+                if (rect.top.HasValue && rect.bottom.HasValue)
+                    tmp += $"height='{context.Size_s(rect.height)}'";
+                tmp += "/>";
+                //Console.WriteLine(tmp);
+                return tmp;
+            }
+            else
+                return "";
         }
     }
 }

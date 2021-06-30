@@ -7,15 +7,24 @@ export function releasePointer(el, p) {
 }
 
 export function GetBoundingClientRect(el_id) {
-    return JSON.stringify(document.getElementById(el_id).getBoundingClientRect());
+    if (document.getElementById(el_id) !== null)
+        return JSON.stringify(document.getElementById(el_id).getBoundingClientRect());
+    else
+        return "{'x':0,'y':0,'width':0,'height':0,'top':0,'right':0,'bottom':0,'left':0}";
 }
 
 export function GetElementWidth(elid) {
-    return document.getElementById(elid).getBoundingClientRect().width;
+    if (document.getElementById(elid) !== null)
+        return document.getElementById(elid).getBoundingClientRect().width;
+    else
+        return 0;
 }
 
 export function GetElementHeight(elid) {
-    return document.getElementById(elid).getBoundingClientRect().height;
+    if (document.getElementById(elid) !== null)
+        return document.getElementById(elid).getBoundingClientRect().height;
+    else
+        return 0;
 }
 
 //export function GetImageSize(uri) {

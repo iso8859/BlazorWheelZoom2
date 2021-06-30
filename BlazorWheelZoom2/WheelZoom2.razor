@@ -54,6 +54,14 @@
         Objects.Add(drawingRect);
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await GetSizesAsync();
+        }
+    }
+
     private IJSObjectReference module;
 
     public void Refresh(string img)
@@ -80,55 +88,59 @@
                 ("import", "./_content/BlazorWheelZoom2/scripts.js");
     }
 
-    public async Task GetSizesAsync()
+    public async Task<bool> GetSizesAsync()
     {
         if (Context.viewSize == null)
         {
             await LoadJSModule();
-            var image = await module.InvokeAsync<string>
-                ("GetBoundingClientRect", Image.id);
+            var image = await module.InvokeAsync<string>("GetBoundingClientRect", Image.id);
+            Console.WriteLine(image);
             var jimage = System.Text.Json.JsonDocument.Parse(image);
             // Always left=0, top=0 => adjust right and bottom
-            Image.rect.left = jimage.RootElement.GetProperty("left").GetDouble();
-            Image.rect.top = jimage.RootElement.GetProperty("top").GetDouble();
-            Image.rect.right = jimage.RootElement.GetProperty("right").GetDouble();
-            Image.rect.bottom = jimage.RootElement.GetProperty("bottom").GetDouble();
-            Image.rect.right = Image.rect.width/Context.zoom;
-            Image.rect.left = 0;
-            Image.rect.bottom = Image.rect.height/Context.zoom;
-            Image.rect.top = 0;
-            var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>
-                ("GetBoundingClientRect", "bwz"));
-            Context.viewSize = new rect()
+            // Will return 0 width and height if image is not loaded
+            Image.rect = new rect(); // To "unset" width and height
+            Image.rect.left = Image.rect.top = 0;
+            double width = jimage.RootElement.GetProperty("width").GetDouble() / Context.zoom;
+            double height = jimage.RootElement.GetProperty("height").GetDouble() / Context.zoom;
+            if (width != 0 && height != 0) // If null the image is not loaded yet, retry later
             {
-                left = svg.RootElement.GetProperty("left").GetDouble(),
-                top = svg.RootElement.GetProperty("top").GetDouble(),
-                right = svg.RootElement.GetProperty("right").GetDouble(),
-                bottom = svg.RootElement.GetProperty("bottom").GetDouble()
-            };
-            Context.areaSize = new rect(0, 0, Image.rect.width, Image.rect.height);
-            // Console.WriteLine($"SVG size = {Context.viewSize.left.ToStringInvariant()};{Context.viewSize.top.ToStringInvariant()};{Context.viewSize.right.ToStringInvariant()};{Context.viewSize.bottom.ToStringInvariant()}");
+                Image.rect.width = width;
+                Image.rect.height = height;
+                var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>("GetBoundingClientRect", "bwz"));
+                Context.viewSize = new rect()
+                {
+                    left = svg.RootElement.GetProperty("left").GetDouble(),
+                    top = svg.RootElement.GetProperty("top").GetDouble(),
+                    right = svg.RootElement.GetProperty("right").GetDouble(),
+                    bottom = svg.RootElement.GetProperty("bottom").GetDouble()
+                };
+                Context.areaSize = new rect(0, 0, Image.rect.width, Image.rect.height);
+                // Console.WriteLine($"SVG size = {Context.viewSize.left.ToStringInvariant()};{Context.viewSize.top.ToStringInvariant()};{Context.viewSize.right.ToStringInvariant()};{Context.viewSize.bottom.ToStringInvariant()}");
+            }
         }
+        return (Context.viewSize != null);
     }
 
-    [JSInvokable]
-    public static Task ImageLoaded()
-    {
-        return GetSizesAsync();
-    }
+    //[JSInvokable]
+    //public static Task ImageLoaded()
+    //{
+    //    return GetSizesAsync();
+    //}
 
 
     async Task Wheel(WheelEventArgs e)
     {
-        await GetSizesAsync();
-        if (e.DeltaY > 0)
-            Context.zoom /= 1.1;
-        else if (e.DeltaY < 0)
-            Context.zoom *= 1.1;
-        Context.zoom = Math.Max(0.1, Math.Min(10, Context.zoom));
-        Context.x_offset = Context.Clip(Context.x_offset, Context.viewSize.width - Context.Size(Image.rect.width));
-        Context.y_offset = Context.Clip(Context.y_offset, Context.viewSize.height - Context.Size(Image.rect.height));
-        StateHasChanged();
+        if (await GetSizesAsync())
+        {
+            if (e.DeltaY > 0)
+                Context.zoom /= 1.1;
+            else if (e.DeltaY < 0)
+                Context.zoom *= 1.1;
+            Context.zoom = Math.Max(0.1, Math.Min(10, Context.zoom));
+            Context.x_offset = Context.Clip(Context.x_offset, Context.viewSize.width - Context.Size(Image.rect.width));
+            Context.y_offset = Context.Clip(Context.y_offset, Context.viewSize.height - Context.Size(Image.rect.height));
+            StateHasChanged();
+        }
     }
 
     long mouseDown = -1;
@@ -137,35 +149,37 @@
 
     async Task PointerDown(PointerEventArgs e)
     {
-        await GetSizesAsync();
-        if (mouseDown == -1)
+        if (await GetSizesAsync())
         {
-            if (e.Button == 0 || e.Button == 2)
+            if (mouseDown == -1)
             {
-                mouseDown = e.Button;
-                mouseDownX = e.OffsetX;
-                mouseDownY = e.OffsetY;
-                mouseDownImageX = Context.x_offset;
-                mouseDownImageY = Context.y_offset;
-                await LoadJSModule();
-                await module.InvokeVoidAsync("capturePointer", divElement, e.PointerId);
-            }
-            if (e.Button == 2)
-            {
-                drawingRect.rect.left = Context.ScreenToViewX(e.OffsetX);
-                drawingRect.rect.top = Context.ScreenToViewY(e.OffsetY);
-                drawingRect.rect.right = drawingRect.rect.left + 1;
-                drawingRect.rect.bottom = drawingRect.rect.top + 1;
-                drawingRect.color = NewRectangleTemplate.color;
-                drawingRect.fill = NewRectangleTemplate.fill;
-                drawingRect.fill_opacity = NewRectangleTemplate.fill_opacity;
-                drawingRect.visible = true;
+                if (e.Button == 0 || e.Button == 2)
+                {
+                    mouseDown = e.Button;
+                    mouseDownX = e.OffsetX;
+                    mouseDownY = e.OffsetY;
+                    mouseDownImageX = Context.x_offset;
+                    mouseDownImageY = Context.y_offset;
+                    await LoadJSModule();
+                    await module.InvokeVoidAsync("capturePointer", divElement, e.PointerId);
+                }
+                if (e.Button == 2)
+                {
+                    drawingRect.rect.left = Context.ScreenToViewX(e.OffsetX);
+                    drawingRect.rect.top = Context.ScreenToViewY(e.OffsetY);
+                    drawingRect.rect.right = drawingRect.rect.left + 1;
+                    drawingRect.rect.bottom = drawingRect.rect.top + 1;
+                    drawingRect.color = NewRectangleTemplate.color;
+                    drawingRect.fill = NewRectangleTemplate.fill;
+                    drawingRect.fill_opacity = NewRectangleTemplate.fill_opacity;
+                    drawingRect.visible = true;
 
-                StateHasChanged();
+                    StateHasChanged();
+                }
             }
+            else
+                await PointerMove(e);
         }
-        else
-            await PointerMove(e);
     }
 
     async Task PointerUp(PointerEventArgs e)
@@ -179,25 +193,30 @@
             drawingRect = new SVGRectangle() { visible = false };
             Objects.Add(drawingRect);
         }
-        mouseDown = -1;
-        await LoadJSModule();
-        await module.InvokeVoidAsync("releasePointer", divElement, e.PointerId);
+        if (mouseDown == 0 || mouseDown == 2)
+        {
+            mouseDown = -1;
+            await LoadJSModule();
+            await module.InvokeVoidAsync("releasePointer", divElement, e.PointerId);
+        }
     }
 
     async Task PointerMove(PointerEventArgs e)
     {
-        await GetSizesAsync();
-        if (mouseDown == 0)
+        if (await GetSizesAsync())
         {
-            Context.x_offset = Context.Clip(mouseDownImageX + e.OffsetX - mouseDownX, Context.viewSize.width - Context.Size(Image.rect.width));
-            Context.y_offset = Context.Clip(mouseDownImageY + e.OffsetY - mouseDownY, Context.viewSize.height - Context.Size(Image.rect.height));
+            if (mouseDown == 0)
+            {
+                Context.x_offset = Context.Clip(mouseDownImageX + e.OffsetX - mouseDownX, Context.viewSize.width - Context.Size(Image.rect.width));
+                Context.y_offset = Context.Clip(mouseDownImageY + e.OffsetY - mouseDownY, Context.viewSize.height - Context.Size(Image.rect.height));
+            }
+            else if (mouseDown == 2)
+            {
+                drawingRect.rect.right = drawingRect.rect.left + Context.ScreenToViewX(mouseDownImageX + e.OffsetX - mouseDownX);
+                drawingRect.rect.bottom = drawingRect.rect.top + Context.ScreenToViewY(mouseDownImageY + e.OffsetY - mouseDownY);
+            }
+            StateHasChanged();
         }
-        else if (mouseDown == 2)
-        {
-            drawingRect.rect.right = drawingRect.rect.left + Context.ScreenToViewX(mouseDownImageX + e.OffsetX - mouseDownX);
-            drawingRect.rect.bottom = drawingRect.rect.top + Context.ScreenToViewY(mouseDownImageY + e.OffsetY - mouseDownY);
-        }
-        StateHasChanged();
     }
 
-                }
+}

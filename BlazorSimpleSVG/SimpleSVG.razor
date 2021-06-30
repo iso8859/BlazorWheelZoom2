@@ -35,7 +35,7 @@
     public void CheckVisible()
     {
         var objToCheck = Objects.Find(_ => _.scrollIntoView == true);
-        if (objToCheck!=null)
+        if (objToCheck!=null && Context.IsValid())
         {
             Context.EnsureIsVisible(objToCheck.rect);
             objToCheck.scrollIntoView = false;
