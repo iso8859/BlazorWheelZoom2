@@ -64,14 +64,21 @@
 
     private IJSObjectReference module;
 
-    public void Refresh(string img)
+    public async Task RefreshAsync(string img)
     {
-        ImageUri = img;
-        Context.viewSize = null;
-        // Context.Reset();
-        Image.href = ImageUri;
-        // imageInfoUpdated = 2;
-        StateHasChanged();
+        if (ImageUri != img)
+        {
+            ImageUri = img;
+            Context.viewSize = null;
+            // Context.Reset();
+            Image.href = ImageUri;
+            // imageInfoUpdated = 2;
+        }
+        else
+        {
+            await GetSizesAsync(); // Refresh image size to be able to draw on it
+        }
+        await InvokeAsync(StateHasChanged);
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()
