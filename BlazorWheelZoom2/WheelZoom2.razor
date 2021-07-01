@@ -59,6 +59,7 @@
         if (firstRender)
         {
             await GetSizesAsync();
+            StateHasChanged();
         }
     }
 
@@ -70,13 +71,7 @@
         {
             ImageUri = img;
             Context.viewSize = null;
-            // Context.Reset();
             Image.href = ImageUri;
-            // imageInfoUpdated = 2;
-        }
-        else
-        {
-            await GetSizesAsync(); // Refresh image size to be able to draw on it
         }
         await InvokeAsync(StateHasChanged);
     }
@@ -125,7 +120,9 @@
                 // Console.WriteLine($"SVG size = {Context.viewSize.left.ToStringInvariant()};{Context.viewSize.top.ToStringInvariant()};{Context.viewSize.right.ToStringInvariant()};{Context.viewSize.bottom.ToStringInvariant()}");
             }
         }
-        return (Context.viewSize != null);
+        bool result = Context.viewSize != null;
+        //Console.WriteLine($"GetSizesAsync = {result}");
+        return result;
     }
 
     //[JSInvokable]
