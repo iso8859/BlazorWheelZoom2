@@ -1,14 +1,38 @@
 ﻿@page "/"
-    <div style="border:solid;border-color:blue;padding:5px;width:520px;height:520px;margin:100px;">
-        <BlazorWheelZoom2.WheelZoom2 ImageUri="/mire.png" Width="500px" Height="500px" RectangleList="rectangles" />
-        <button @onclick="()=>Test()">Test</button>
-    </div>
-
+<h1>BlazorWheelZoom2 demo</h1>
+<p>You can zoom using wheel button.</p>
+<p>You can scroll using the left button.</p>
+<p>You can draw rectangle using right button.</p>
+<div class="center">
+    <BlazorWheelZoom2.WheelZoom2 ImageUri="/mire.png" Width="500px" Height="500px" RectangleList="rectangles" NewRectangle="newRectangle" />
+</div>
+<div>
+    <button @onclick="()=>Red()">Add red rectangle</button>
+    <button @onclick="()=>InView()">First rectangle in view</button>
+</div>
+<p>Rectangle list</p>
+<ul>
+    @foreach (var rect in rectangles)
+    {
+        <li>@(rect)</li>
+    }
+</ul>
 @code
 {
     List<BlazorSimpleSVG.SVGRectangle> rectangles = new List<BlazorSimpleSVG.SVGRectangle>();
-    void Test()
+    void Red()
     {
-        rectangles.Add(new BlazorSimpleSVG.SVGRectangle() { rect = new BlazorSimpleSVG.rect(600, 600, 700, 700), scrollIntoView = true, fill="#FF0000" });
+        rectangles.Add(new BlazorSimpleSVG.SVGRectangle() { rect = new BlazorSimpleSVG.rect(600, 600, 700, 700), scrollIntoView = true, fill = "#FF0000" });
+    }
+
+    void InView()
+    {
+        if (rectangles.Count > 0)
+            rectangles[0].scrollIntoView = true;
+    }
+
+    void newRectangle(BlazorSimpleSVG.SVGRectangle rect)
+    {
+        rectangles.Add(rect);
     }
 }
