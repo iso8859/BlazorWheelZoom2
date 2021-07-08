@@ -56,6 +56,11 @@ namespace BlazorSimpleSVG
 
             return new rect();
         }
+
+        public override string ToString()
+        {
+            return $"left={left};top={top};right={right};bottom={bottom}";
+        }
     }
     public class SVGContext
     {
@@ -63,6 +68,11 @@ namespace BlazorSimpleSVG
         public double x_offset = 0, y_offset = 0, zoom = 1;
         public rect viewSize; // Size of the visible part zoom 1
         public rect areaSize; // Size of the drawing part zoom 1
+
+        public override string ToString()
+        {
+            return $"x_offset={x_offset};y_offset={y_offset};zoom={zoom};viewSize={viewSize};areaSize={areaSize}";
+        }
         public double Clip(double i, double minOffset)
         {
             return Math.Min(0, Math.Max(i, minOffset));
