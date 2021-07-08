@@ -7,3 +7,4 @@
 * Clone the repo
 * Add reference to BlazorSimpleSVG and BlazorWheelZoom2
 
+MIT Licence
