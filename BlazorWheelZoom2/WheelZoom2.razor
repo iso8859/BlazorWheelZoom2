@@ -73,6 +73,7 @@
     }
 
     // Use this method if you want to change the image
+    Timer timer;
     public async Task RefreshAsync(string img)
     {
         if (ImageUri != img)
@@ -81,8 +82,23 @@
             Context.viewSize = null;
             await ContextHasChangedAsync();
             Image.href = ImageUri;
+            if (timer != null)
+                timer.Dispose();
+            timer = new Timer(async (e) => {
+                await InvokeAsync(CheckSizeAsync);
+            }, null, 250, 250);
         }
         await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task CheckSizeAsync()
+    {
+        if (await GetSizesAsync())
+        {
+            await ContextHasChangedAsync();
+            await timer.DisposeAsync();
+            timer = null;
+        }
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()
@@ -95,8 +111,7 @@
     public async Task LoadJSModule()
     {
         if (module == null)
-            module = await JSRuntime.InvokeAsync<IJSObjectReference>
-                ("import", "./_content/BlazorWheelZoom2/scripts.js");
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorWheelZoom2/scripts.js");
     }
 
     public async Task<bool> GetSizesAsync()
@@ -105,7 +120,7 @@
         {
             await LoadJSModule();
             var image = await module.InvokeAsync<string>("GetBoundingClientRect", Image.id);
-            Console.WriteLine(image);
+            //Console.WriteLine(image);
             var jimage = System.Text.Json.JsonDocument.Parse(image);
             // Always left=0, top=0 => adjust right and bottom
             // Will return 0 width and height if image is not loaded
