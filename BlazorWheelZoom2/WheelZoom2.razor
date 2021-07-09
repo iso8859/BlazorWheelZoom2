@@ -83,7 +83,7 @@
             await ContextHasChangedAsync();
             Image.href = ImageUri;
             if (timer != null)
-                timer.Dispose();
+                await timer.DisposeAsync();
             timer = new Timer(async (e) => {
                 await InvokeAsync(CheckSizeAsync);
             }, null, 250, 250);
@@ -96,7 +96,8 @@
         if (await GetSizesAsync())
         {
             await ContextHasChangedAsync();
-            await timer.DisposeAsync();
+            if (timer != null)
+                await timer.DisposeAsync();
             timer = null;
         }
     }
