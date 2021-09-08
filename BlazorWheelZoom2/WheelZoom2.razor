@@ -76,6 +76,7 @@
 
     // Use this method if you want to change the image
     Timer timer;
+    int timerCount;
     public async Task RefreshAsync(string img)
     {
         if (ImageUri != img)
@@ -86,10 +87,11 @@
             Image.href = ImageUri;
             if (timer != null)
                 await timer.DisposeAsync();
+            timerCount = 3;
             timer = new Timer(async (e) =>
             {
                 await InvokeAsync(CheckSizeAsync);
-            }, null, 250, 250);
+            }, null, 250, Timeout.Infinite);
         }
         await InvokeAsync(StateHasChanged);
     }
@@ -97,19 +99,27 @@
     public async Task CheckSizeAsync()
     {
         if (await GetSizesAsync())
-        {
             await ContextHasChangedAsync();
+        else
+        {
             if (timer != null)
                 await timer.DisposeAsync();
-            timer = null;
+            timer = new Timer(async (e) =>
+            {
+                await InvokeAsync(CheckSizeAsync);
+            }, null, 250, Timeout.Infinite);
         }
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        if (module != null)
-            await module.DisposeAsync();
-        module = null;
+        try
+        {
+            if (module != null)
+                await module.DisposeAsync();
+            module = null;
+        }
+        catch { }
     }
 
     public async Task LoadJSModule()
