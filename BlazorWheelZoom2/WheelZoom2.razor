@@ -75,8 +75,6 @@
     }
 
     // Use this method if you want to change the image
-    Timer timer;
-    int timerCount;
     public async Task RefreshAsync(string img)
     {
         if (ImageUri != img)
@@ -85,17 +83,12 @@
             Context.viewSize = null;
             await ContextHasChangedAsync();
             Image.href = ImageUri;
-            if (timer != null)
-                await timer.DisposeAsync();
-            timerCount = 3;
-            timer = new Timer(async (e) =>
-            {
-                await InvokeAsync(CheckSizeAsync);
-            }, null, 250, Timeout.Infinite);
+            await CheckSizeAsync();
         }
         await InvokeAsync(StateHasChanged);
     }
 
+    Timer timer;
     public async Task CheckSizeAsync()
     {
         if (await GetSizesAsync())
