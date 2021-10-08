@@ -30,24 +30,24 @@ namespace BlazorSimpleSVG
         }
 
         public bool IsEmpty() => !left.HasValue || !top.HasValue || !right.HasValue || !bottom.HasValue;
-        public double width
+        public double? width
         {
-            get => right.Value - left.Value;
+            get => (right.HasValue && left.HasValue) ? (right.Value - left.Value) : null;
             set => right = left.Value + value;
         }
 
-        public double height
+        public double? height
         {
-            get => bottom.Value - top.Value;
+            get => (bottom.HasValue && top.HasValue) ? (bottom.Value - top.Value) : null;
             set => bottom = top.Value + value;
         }
 
         public static rect Intersect(rect a, rect b)
         {
             double x1 = Math.Max(a.left.Value, b.top.Value);
-            double x2 = Math.Min(a.left.Value + a.width, b.left.Value + b.width);
+            double x2 = Math.Min(a.left.Value + a.width.Value, b.left.Value + b.width.Value);
             double y1 = Math.Max(a.top.Value, b.top.Value);
-            double y2 = Math.Min(a.top.Value + a.height, b.top.Value + b.height);
+            double y2 = Math.Min(a.top.Value + a.height.Value, b.top.Value + b.height.Value);
 
             if (x2 >= x1 && y2 >= y1)
             {
@@ -97,8 +97,8 @@ namespace BlazorSimpleSVG
         public string Size_s(double i) => (i * zoom).ToStringInvariant();
         public void EnsureIsVisible(rect area)
         {
-            x_offset = Clip(Size(-area.left.Value+10), viewSize.width - Size(areaSize.width));
-            y_offset = Clip(Size(-area.top.Value+10), viewSize.height - Size(areaSize.height));
+            x_offset = Clip(Size(-area.left.Value+10), viewSize.width.Value - Size(areaSize.width.Value));
+            y_offset = Clip(Size(-area.top.Value+10), viewSize.height.Value - Size(areaSize.height.Value));
         }
     }
 
@@ -131,7 +131,7 @@ namespace BlazorSimpleSVG
         public string fill_opacity = _fillopacity;
         public override string GetSVG(SVGContext context)
         {
-            var tmp = $"<rect {GetId()} x='{context.TranslateX(rect.left.Value)}' y='{context.TranslateY(rect.top.Value)}' width='{context.Size_s(rect.width)}' height='{context.Size_s(rect.height)}' fill='{fill}' fill-opacity='{fill_opacity}' stroke='{color}' stroke-width='1'/>";
+            var tmp = $"<rect {GetId()} x='{context.TranslateX(rect.left.Value)}' y='{context.TranslateY(rect.top.Value)}' width='{context.Size_s(rect.width.Value)}' height='{context.Size_s(rect.height.Value)}' fill='{fill}' fill-opacity='{fill_opacity}' stroke='{color}' stroke-width='1'/>";
             //Console.WriteLine(tmp);
             return tmp;
         }
@@ -156,12 +156,15 @@ namespace BlazorSimpleSVG
                     tmp += $"x='{context.TranslateX(rect.left.Value)}' ";
                 if (rect.top.HasValue)
                     tmp += $"y='{context.TranslateY(rect.top.Value)}' ";
-                if (rect.left.HasValue && rect.right.HasValue)
-                    tmp += $"width='{context.Size_s(rect.width)}' ";
-                if (rect.top.HasValue && rect.bottom.HasValue)
-                    tmp += $"height='{context.Size_s(rect.height)}'";
+                if (rect.width.HasValue)
+                    tmp += $"width='{context.Size_s(rect.width.Value)}' ";
+                if (rect.height.HasValue)
+                    tmp += $"height='{context.Size_s(rect.height.Value)}'";
                 tmp += "/>";
-                //Console.WriteLine(tmp);
+                if (rect.width.HasValue && rect.height.HasValue)
+                    Console.WriteLine(rect.width.Value + ";" + rect.height.Value);
+                else
+                    Console.WriteLine("??;??");
                 return tmp;
             }
             else

@@ -52,7 +52,7 @@
     protected override void OnInitialized()
     {
         Context.zoom = 1; // The zoom must start at 1 so we can determine the image size
-        Image = new SVGImage() { id = "img1", href = ImageUri };
+        Image = new SVGImage() { id = Guid.NewGuid().ToString(), href = ImageUri };
         Objects.Add(Image);
         drawingRect = new SVGRectangle() { visible = false };
         Objects.Add(drawingRect);
@@ -83,6 +83,7 @@
             Context.viewSize = null;
             await ContextHasChangedAsync();
             Image.href = ImageUri;
+            Image.id = Guid.NewGuid().ToString();
             await CheckSizeAsync();
         }
         await InvokeAsync(StateHasChanged);
@@ -147,7 +148,7 @@
                     right = svg.RootElement.GetProperty("right").GetDouble(),
                     bottom = svg.RootElement.GetProperty("bottom").GetDouble()
                 };
-                Context.areaSize = new rect(0, 0, Image.rect.width, Image.rect.height);
+                Context.areaSize = new rect(0, 0, Image.rect.width.Value, Image.rect.height.Value);
                 // Console.WriteLine($"SVG size = {Context.viewSize.left.ToStringInvariant()};{Context.viewSize.top.ToStringInvariant()};{Context.viewSize.right.ToStringInvariant()};{Context.viewSize.bottom.ToStringInvariant()}");
                 await ContextHasChangedAsync();
             }
@@ -166,8 +167,8 @@
     async Task CheckZoomAsync()
     {
         Context.zoom = Math.Max(0.1, Math.Min(10, Context.zoom));
-        Context.x_offset = Context.Clip(Context.x_offset, Context.viewSize.width - Context.Size(Image.rect.width));
-        Context.y_offset = Context.Clip(Context.y_offset, Context.viewSize.height - Context.Size(Image.rect.height));
+        Context.x_offset = Context.Clip(Context.x_offset, Context.viewSize.width.Value - Context.Size(Image.rect.width.Value));
+        Context.y_offset = Context.Clip(Context.y_offset, Context.viewSize.height.Value - Context.Size(Image.rect.height.Value));
         await ContextHasChangedAsync();
         StateHasChanged();
     }
@@ -261,8 +262,8 @@
         {
             if (mouseDown == 0)
             {
-                Context.x_offset = Context.Clip(mouseDownImageX + e.OffsetX - mouseDownX, Context.viewSize.width - Context.Size(Image.rect.width));
-                Context.y_offset = Context.Clip(mouseDownImageY + e.OffsetY - mouseDownY, Context.viewSize.height - Context.Size(Image.rect.height));
+                Context.x_offset = Context.Clip(mouseDownImageX + e.OffsetX - mouseDownX, Context.viewSize.width.Value - Context.Size(Image.rect.width.Value));
+                Context.y_offset = Context.Clip(mouseDownImageY + e.OffsetY - mouseDownY, Context.viewSize.height.Value - Context.Size(Image.rect.height.Value));
                 await ContextHasChangedAsync();
             }
             else if (mouseDown == 2)
