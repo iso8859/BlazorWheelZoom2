@@ -161,10 +161,10 @@ namespace BlazorSimpleSVG
                 if (rect.height.HasValue)
                     tmp += $"height='{context.Size_s(rect.height.Value)}'";
                 tmp += "/>";
-                if (rect.width.HasValue && rect.height.HasValue)
-                    Console.WriteLine(rect.width.Value + ";" + rect.height.Value);
-                else
-                    Console.WriteLine("??;??");
+                //if (rect.width.HasValue && rect.height.HasValue)
+                //    Console.WriteLine(rect.width.Value + ";" + rect.height.Value);
+                //else
+                //    Console.WriteLine("??;??");
                 return tmp;
             }
             else

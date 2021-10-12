@@ -230,7 +230,7 @@
 
     async Task PointerUp(PointerEventArgs e)
     {
-        Console.WriteLine("PointerUp {0}", System.Text.Json.JsonSerializer.Serialize(e));
+        //Console.WriteLine("PointerUp {0}", System.Text.Json.JsonSerializer.Serialize(e));
         pointList.Remove(pointList.Find(_ => _.PointerId == e.PointerId));
         if (pointList.Count < 2)
             prevDist = null;
@@ -292,7 +292,7 @@
 
     Task TouchMove(TouchEventArgs e)
     {
-        Console.WriteLine(JsonSerializer.Serialize(e));
+        //Console.WriteLine(JsonSerializer.Serialize(e));
         return Task.CompletedTask;
     }
 }
