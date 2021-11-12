@@ -92,15 +92,17 @@
     Timer timer;
     public async Task CheckSizeAsync()
     {
-        if (await GetSizesAsync())
-            await ContextHasChangedAsync();
-        else
+        try
         {
-            if (timer != null)
-                await timer.DisposeAsync();
-            timer = new Timer(async (e) =>
+            if (await GetSizesAsync())
+                await ContextHasChangedAsync();
+            else
             {
-                try
+                if (timer != null)
+                    await timer.DisposeAsync();
+                timer = new Timer(async (e) =>
+                {
+                     try
                 {
                     await InvokeAsync(CheckSizeAsync);
                 }
@@ -108,9 +110,10 @@
                 {
                 
                 }
-
-            }, null, 250, Timeout.Infinite);
+                }, null, 250, Timeout.Infinite);
+            }
         }
+        catch { }
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()
