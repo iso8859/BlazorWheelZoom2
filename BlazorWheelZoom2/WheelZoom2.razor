@@ -100,7 +100,15 @@
                 await timer.DisposeAsync();
             timer = new Timer(async (e) =>
             {
-                await InvokeAsync(CheckSizeAsync);
+                try
+                {
+                    await InvokeAsync(CheckSizeAsync);
+                }
+                catch
+                {
+                
+                }
+
             }, null, 250, Timeout.Infinite);
         }
     }
