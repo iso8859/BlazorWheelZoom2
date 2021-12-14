@@ -69,9 +69,11 @@
 
     private IJSObjectReference module;
 
-    public Task ContextHasChangedAsync()
+    public async Task ContextHasChangedAsync()
     {
-        return ContextChanged.InvokeAsync(Context);
+        //if (ContextChanged.HasDelegate)
+        //    await ContextChanged.InvokeAsync(Context);
+        await InvokeAsync(StateHasChanged);
     }
 
     // Use this method if you want to change the image
@@ -145,8 +147,8 @@
             // Will return 0 width and height if image is not loaded
             Image.rect = new rect(); // To "unset" width and height
             Image.rect.left = Image.rect.top = 0;
-            double width = jimage.RootElement.GetProperty("width").GetDouble() / Context.zoom;
-            double height = jimage.RootElement.GetProperty("height").GetDouble() / Context.zoom;
+            double width = jimage.RootElement.GetProperty("width").GetDouble();// non  / Context.zoom;
+            double height = jimage.RootElement.GetProperty("height").GetDouble(); // non / Context.zoom;
             if (width != 0 && height != 0) // If null the image is not loaded yet, retry later
             {
                 Image.rect.width = width;

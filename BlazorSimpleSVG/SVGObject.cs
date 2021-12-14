@@ -132,7 +132,7 @@ namespace BlazorSimpleSVG
         public override string GetSVG(SVGContext context)
         {
             var tmp = $"<rect {GetId()} x='{context.TranslateX(rect.left.Value)}' y='{context.TranslateY(rect.top.Value)}' width='{context.Size_s(rect.width.Value)}' height='{context.Size_s(rect.height.Value)}' fill='{fill}' fill-opacity='{fill_opacity}' stroke='{color}' stroke-width='1'/>";
-            //Console.WriteLine(tmp);
+            //Console.WriteLine("SVGRectangle zoom =" + context.zoom);
             return tmp;
         }
 
@@ -161,10 +161,7 @@ namespace BlazorSimpleSVG
                 if (rect.height.HasValue)
                     tmp += $"height='{context.Size_s(rect.height.Value)}'";
                 tmp += "/>";
-                //if (rect.width.HasValue && rect.height.HasValue)
-                //    Console.WriteLine(rect.width.Value + ";" + rect.height.Value);
-                //else
-                //    Console.WriteLine("??;??");
+                //Console.WriteLine("SVGImage zoom =" + context.zoom);
                 return tmp;
             }
             else
