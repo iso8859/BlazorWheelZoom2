@@ -23,6 +23,18 @@ namespace BlazorSimpleSVG
 
         public rect(double _left, double _top, double _right, double _bottom)
         {
+            if (_right<_left)
+            {
+                double t = _right;
+                _right = _left;
+                _left = t;
+            }
+            if (_bottom<_top)
+            {
+                double t = _bottom;
+                _bottom = _top;
+                _top = t;
+            }
             left = _left;
             top = _top;
             right = _right;
