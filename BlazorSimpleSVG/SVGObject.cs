@@ -18,18 +18,18 @@ namespace BlazorSimpleSVG
 
         public rect()
         {
-                
+
         }
 
         public rect(double _left, double _top, double _right, double _bottom)
         {
-            if (_right<_left)
+            if (_right < _left)
             {
                 double t = _right;
                 _right = _left;
                 _left = t;
             }
-            if (_bottom<_top)
+            if (_bottom < _top)
             {
                 double t = _bottom;
                 _bottom = _top;
@@ -39,6 +39,14 @@ namespace BlazorSimpleSVG
             top = _top;
             right = _right;
             bottom = _bottom;
+        }
+
+        public rect NomalizedRect()
+        {
+            if (left.HasValue && top.HasValue && right.HasValue && bottom.HasValue)
+                return new rect(left.Value, top.Value, right.Value, bottom.Value);
+            else
+                return new rect(0, 0, 0, 0);
         }
 
         public bool IsEmpty() => !left.HasValue || !top.HasValue || !right.HasValue || !bottom.HasValue;
@@ -109,8 +117,8 @@ namespace BlazorSimpleSVG
         public string Size_s(double i) => (i * zoom).ToStringInvariant();
         public void EnsureIsVisible(rect area)
         {
-            x_offset = Clip(Size(-area.left.Value+10), viewSize.width.Value - Size(areaSize.width.Value));
-            y_offset = Clip(Size(-area.top.Value+10), viewSize.height.Value - Size(areaSize.height.Value));
+            x_offset = Clip(Size(-area.left.Value + 10), viewSize.width.Value - Size(areaSize.width.Value));
+            y_offset = Clip(Size(-area.top.Value + 10), viewSize.height.Value - Size(areaSize.height.Value));
         }
     }
 
