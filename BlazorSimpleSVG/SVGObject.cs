@@ -53,13 +53,21 @@ namespace BlazorSimpleSVG
         public double? width
         {
             get => (right.HasValue && left.HasValue) ? (right.Value - left.Value) : null;
-            set => right = left.Value + value;
+            set
+            {
+                if (left.HasValue && value.HasValue)
+                    right = left.Value + value.Value;
+            }
         }
 
         public double? height
         {
             get => (bottom.HasValue && top.HasValue) ? (bottom.Value - top.Value) : null;
-            set => bottom = top.Value + value;
+            set
+            {
+                if (top.HasValue && value.HasValue)
+                    bottom = top.Value + value.Value;
+            } 
         }
 
         public static rect Intersect(rect a, rect b)
@@ -151,7 +159,8 @@ namespace BlazorSimpleSVG
         public string fill_opacity = _fillopacity;
         public override string GetSVG(SVGContext context)
         {
-            var tmp = $"<rect {GetId()} x='{context.TranslateX(rect.left.Value)}' y='{context.TranslateY(rect.top.Value)}' width='{context.Size_s(rect.width.Value)}' height='{context.Size_s(rect.height.Value)}' fill='{fill}' fill-opacity='{fill_opacity}' stroke='{color}' stroke-width='1'/>";
+            // To avoi negative size rect
+            var tmp = $"<rect {GetId()} x='{context.TranslateX(rect.left.Value)}' y='{context.TranslateY(rect.top.Value)}' width='{context.Size_s(Math.Abs(rect.width.Value))}' height='{context.Size_s(Math.Abs(rect.height.Value))}' fill='{fill}' fill-opacity='{fill_opacity}' stroke='{color}' stroke-width='1'/>";
             //Console.WriteLine("SVGRectangle zoom =" + context.zoom);
             return tmp;
         }
@@ -177,9 +186,9 @@ namespace BlazorSimpleSVG
                 if (rect.top.HasValue)
                     tmp += $"y='{context.TranslateY(rect.top.Value)}' ";
                 if (rect.width.HasValue)
-                    tmp += $"width='{context.Size_s(rect.width.Value)}' ";
+                    tmp += $"width='{context.Size_s(Math.Abs(rect.width.Value))}' ";
                 if (rect.height.HasValue)
-                    tmp += $"height='{context.Size_s(rect.height.Value)}'";
+                    tmp += $"height='{context.Size_s(Math.Abs(rect.height.Value))}'";
                 tmp += "/>";
                 //Console.WriteLine("SVGImage zoom =" + context.zoom);
                 return tmp;

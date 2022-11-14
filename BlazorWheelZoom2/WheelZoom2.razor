@@ -10,15 +10,23 @@
      @onpointerup=PointerUp @onpointerup:preventDefault @onpointerup:stopPropagation
      @oncontextmenu="()=> { }" @oncontextmenu:preventDefault
      @onpointermove=PointerMove @onpointermove:preventDefault
-     @onwheel=Wheel @onwheel:stopPropagation @onwheel:preventDefault>
+     @onwheel=Wheel @onwheel:stopPropagation
+     @ontouchstart:stopPropagation @ontouchstart:preventDefault
+     @ontouchend:stopPropagation @ontouchend:preventDefault
+     @ontouchenter:stopPropagation @ontouchenter:preventDefault
+     @ontouchleave:stopPropagation @ontouchleave:preventDefault
+     @ontouchmove:stopPropagation @ontouchmove:preventDefault>
     @*@ontouchmove=TouchMove*@
 
     @{
         Objects = new List<SVGObject>();
         if (Image != null)
             Objects.Add(Image);
-        if (RectangleList != null)
-            Objects.AddRange(RectangleList);
+        lock (_RectLock)
+        {
+            if (_RectangleList != null)
+                Objects.AddRange(_RectangleList);
+        }
         if (drawingRect != null)
             Objects.Add(drawingRect);
     }
@@ -39,8 +47,20 @@
     public EventCallback<SVGRectangle> NewRectangle { get; set; }
     [Parameter]
     public SVGRectangle NewRectangleTemplate { get; set; } = new SVGRectangle() { color = "red", fill = "lightgray", fill_opacity = "50%" };
+    List<SVGRectangle> _RectangleList;
+    public string _RectLock = "lock";
     [Parameter]
-    public List<SVGRectangle> RectangleList { get; set; }
+    public List<SVGRectangle> RectangleList
+    {
+        get => _RectangleList;
+        set
+        {
+            lock (_RectLock)
+            {
+                _RectangleList = value;
+            }
+        }
+    }
     [Parameter]
     public EventCallback<SVGContext> ContextChanged { get; set; }
 
@@ -149,7 +169,7 @@
             Image.rect.left = Image.rect.top = 0;
             double width = jimage.RootElement.GetProperty("width").GetDouble();// non  / Context.zoom;
             double height = jimage.RootElement.GetProperty("height").GetDouble(); // non / Context.zoom;
-            if (width != 0 && height != 0) // If null the image is not loaded yet, retry later
+            if (width > 0 && height > 0) // If null the image is not loaded yet, retry later
             {
                 Image.rect.width = width;
                 Image.rect.height = height;
@@ -161,9 +181,18 @@
                         right = svg.RootElement.GetProperty("right").GetDouble(),
                         bottom = svg.RootElement.GetProperty("bottom").GetDouble()
                     };
-                Context.areaSize = new rect(0, 0, Image.rect.width.Value, Image.rect.height.Value);
-                // Console.WriteLine($"SVG size = {Context.viewSize.left.ToStringInvariant()};{Context.viewSize.top.ToStringInvariant()};{Context.viewSize.right.ToStringInvariant()};{Context.viewSize.bottom.ToStringInvariant()}");
-                await ContextHasChangedAsync();
+                // il semble que parfois une des valeurs est absente
+                // System.InvalidOperationException: Nullable object must have a value.
+                // at System.Nullable`1.get_Value()
+                // at BlazorWheelZoom2.WheelZoom2.GetSizesAsync() in R:\dev\geideon11web\Server\libs\BlazorWheelZoom2\BlazorWheelZoom2\WheelZoom2.razor:line 164
+                if (Image.rect.width.HasValue && Image.rect.height.HasValue)
+                {
+                    Context.areaSize = new rect(0, 0, Image.rect.width.Value, Image.rect.height.Value);
+                    // Console.WriteLine($"SVG size = {Context.viewSize.left.ToStringInvariant()};{Context.viewSize.top.ToStringInvariant()};{Context.viewSize.right.ToStringInvariant()};{Context.viewSize.bottom.ToStringInvariant()}");
+                    await ContextHasChangedAsync();
+                }
+                else
+                    Context.viewSize = null;
             }
         }
         bool result = Context.viewSize != null;
@@ -277,7 +306,7 @@
 
         if (await GetSizesAsync())
         {
-            if (mouseDown == 0)
+            if (mouseDown == 0 && Image.rect.width.HasValue && Image.rect.height.HasValue)
             {
                 Context.x_offset = Context.Clip(mouseDownImageX + e.OffsetX - mouseDownX, Context.viewSize.width.Value - Context.Size(Image.rect.width.Value));
                 Context.y_offset = Context.Clip(mouseDownImageY + e.OffsetY - mouseDownY, Context.viewSize.height.Value - Context.Size(Image.rect.height.Value));
