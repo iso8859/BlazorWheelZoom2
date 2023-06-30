@@ -12,16 +12,16 @@ namespace BlazorSimpleSVG
     {
         static public string ToStringInvariant(this double val) => val.ToString(CultureInfo.InvariantCulture);
     }
-    public class rect
+    public class Rect
     {
         public double? left, top, right, bottom;
 
-        public rect()
+        public Rect()
         {
 
         }
 
-        public rect(double _left, double _top, double _right, double _bottom)
+        public Rect(double _left, double _top, double _right, double _bottom)
         {
             if (_right < _left)
             {
@@ -41,12 +41,12 @@ namespace BlazorSimpleSVG
             bottom = _bottom;
         }
 
-        public rect NomalizedRect()
+        public Rect NomalizedRect()
         {
             if (left.HasValue && top.HasValue && right.HasValue && bottom.HasValue)
-                return new rect(left.Value, top.Value, right.Value, bottom.Value);
+                return new Rect(left.Value, top.Value, right.Value, bottom.Value);
             else
-                return new rect(0, 0, 0, 0);
+                return new Rect(0, 0, 0, 0);
         }
 
         public bool IsEmpty() => !left.HasValue || !top.HasValue || !right.HasValue || !bottom.HasValue;
@@ -70,7 +70,7 @@ namespace BlazorSimpleSVG
             } 
         }
 
-        public static rect Intersect(rect a, rect b)
+        public static Rect Intersect(Rect a, Rect b)
         {
             double x1 = Math.Max(a.left.Value, b.top.Value);
             double x2 = Math.Min(a.left.Value + a.width.Value, b.left.Value + b.width.Value);
@@ -79,10 +79,10 @@ namespace BlazorSimpleSVG
 
             if (x2 >= x1 && y2 >= y1)
             {
-                return new rect(x1, y1, x2 - x1, y2 - y1);
+                return new Rect(x1, y1, x2 - x1, y2 - y1);
             }
 
-            return new rect();
+            return new Rect();
         }
 
         public override string ToString()
@@ -94,8 +94,8 @@ namespace BlazorSimpleSVG
     {
         public string clip_name = "clip-path";
         public double x_offset = 0, y_offset = 0, zoom = 1;
-        public rect viewSize; // Size of the visible part zoom 1
-        public rect areaSize; // Size of the drawing part zoom 1
+        public Rect viewSize; // Size of the visible part zoom 1
+        public Rect areaSize; // Size of the drawing part zoom 1
 
         public override string ToString()
         {
@@ -123,7 +123,7 @@ namespace BlazorSimpleSVG
         public string TranslateY(double y) => (y_offset + (y * zoom)).ToStringInvariant();
         public double Size(double i) => i * zoom;
         public string Size_s(double i) => (i * zoom).ToStringInvariant();
-        public void EnsureIsVisible(rect area)
+        public void EnsureIsVisible(Rect area)
         {
             x_offset = Clip(Size(-area.left.Value + 10), viewSize.width.Value - Size(areaSize.width.Value));
             y_offset = Clip(Size(-area.top.Value + 10), viewSize.height.Value - Size(areaSize.height.Value));
@@ -138,7 +138,7 @@ namespace BlazorSimpleSVG
         static public readonly string _fillopacity = "1";
 
         public string id;
-        public rect rect = new rect();
+        public Rect rect = new Rect();
         public bool scrollIntoView = false;
         public bool visible = true;
         public virtual string GetSVG(SVGContext context) { return ""; }

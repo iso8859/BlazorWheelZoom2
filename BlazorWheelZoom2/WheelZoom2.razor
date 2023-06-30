@@ -165,7 +165,7 @@
             var jimage = System.Text.Json.JsonDocument.Parse(image);
             // Always left=0, top=0 => adjust right and bottom
             // Will return 0 width and height if image is not loaded
-            Image.rect = new rect(); // To "unset" width and height
+            Image.rect = new Rect(); // To "unset" width and height
             Image.rect.left = Image.rect.top = 0;
             double width = jimage.RootElement.GetProperty("width").GetDouble();// non  / Context.zoom;
             double height = jimage.RootElement.GetProperty("height").GetDouble(); // non / Context.zoom;
@@ -174,7 +174,7 @@
                 Image.rect.width = width;
                 Image.rect.height = height;
                 var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>("GetBoundingClientRect", "bwz"));
-                Context.viewSize = new rect()
+                Context.viewSize = new Rect()
                     {
                         left = svg.RootElement.GetProperty("left").GetDouble(),
                         top = svg.RootElement.GetProperty("top").GetDouble(),
@@ -187,7 +187,7 @@
                 // at BlazorWheelZoom2.WheelZoom2.GetSizesAsync() in R:\dev\geideon11web\Server\libs\BlazorWheelZoom2\BlazorWheelZoom2\WheelZoom2.razor:line 164
                 if (Image.rect.width.HasValue && Image.rect.height.HasValue)
                 {
-                    Context.areaSize = new rect(0, 0, Image.rect.width.Value, Image.rect.height.Value);
+                    Context.areaSize = new Rect(0, 0, Image.rect.width.Value, Image.rect.height.Value);
                     // Console.WriteLine($"SVG size = {Context.viewSize.left.ToStringInvariant()};{Context.viewSize.top.ToStringInvariant()};{Context.viewSize.right.ToStringInvariant()};{Context.viewSize.bottom.ToStringInvariant()}");
                     await ContextHasChangedAsync();
                 }
