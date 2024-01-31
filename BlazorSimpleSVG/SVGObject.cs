@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Microsoft.JSInterop;
+using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -141,7 +143,8 @@ namespace BlazorSimpleSVG
         public Rect rect = new Rect();
         public bool scrollIntoView = false;
         public bool visible = true;
-        public virtual string GetSVG(SVGContext context) { return ""; }
+        public virtual string GetSVG(SimpleSVG instance, SVGContext context) { return ""; }
+        public virtual void SetImageSize(string data) { }
 
         public string GetId()
         {
@@ -157,7 +160,7 @@ namespace BlazorSimpleSVG
         public string color = _black;
         public string fill = _none;
         public string fill_opacity = _fillopacity;
-        public override string GetSVG(SVGContext context)
+        public override string GetSVG(SimpleSVG instance, SVGContext context)
         {
             // To avoi negative size rect
             var tmp = $"<rect {GetId()} x='{context.TranslateX(rect.left.Value)}' y='{context.TranslateY(rect.top.Value)}' width='{context.Size_s(Math.Abs(rect.width.Value))}' height='{context.Size_s(Math.Abs(rect.height.Value))}' fill='{fill}' fill-opacity='{fill_opacity}' stroke='{color}' stroke-width='1'/>";
@@ -176,11 +179,12 @@ namespace BlazorSimpleSVG
         public string href;
         // https://stackoverflow.com/questions/11390830/is-it-possible-to-listen-image-load-event-in-svg
         // https://stackoverflow.com/questions/6575159/get-image-dimensions-with-javascript-before-image-has-fully-loaded
-        public override string GetSVG(SVGContext context)
+        public override string GetSVG(SimpleSVG instance, SVGContext context)
         {
             if (!string.IsNullOrEmpty(href))
             {
-                var tmp = $"<image {GetId()} xlink:href='{href}' ";
+                SimpleSVG.objectMapper.AddOrUpdate(new ObjectRef<SVGObject>() { Id = id, Instance = this });
+                var tmp = $"<image {GetId()} href='{href}' ";
                 if (rect.left.HasValue)
                     tmp += $"x='{context.TranslateX(rect.left.Value)}' ";
                 if (rect.top.HasValue)
@@ -189,12 +193,26 @@ namespace BlazorSimpleSVG
                     tmp += $"width='{context.Size_s(Math.Abs(rect.width.Value))}' ";
                 if (rect.height.HasValue)
                     tmp += $"height='{context.Size_s(Math.Abs(rect.height.Value))}'";
-                tmp += "/>";
-                //Console.WriteLine("SVGImage zoom =" + context.zoom);
+                tmp += $"onload='BlazorSimpleSVG.imageLoaded(\"{id}\")' />";
                 return tmp;
             }
             else
                 return "";
+        }
+
+        public void ClearSize()
+        {
+            rect = new Rect();
+        }
+
+        public override void SetImageSize(string data)
+        {
+            var jimage = System.Text.Json.JsonDocument.Parse(data);
+            rect = new Rect();
+            rect.left = 0;
+            rect.top = 0;
+            rect.width = jimage.RootElement.GetProperty("width").GetDouble();
+            rect.height = jimage.RootElement.GetProperty("height").GetDouble();
         }
     }
 }

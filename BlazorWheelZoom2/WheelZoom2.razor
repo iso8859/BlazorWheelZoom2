@@ -19,16 +19,19 @@
     @*@ontouchmove=TouchMove*@
 
     @{
-        Objects = new List<SVGObject>();
-        if (Image != null)
-            Objects.Add(Image);
-        lock (_RectLock)
+        if (module != null)
         {
-            if (_RectangleList != null)
-                Objects.AddRange(_RectangleList);
+            Objects = new List<SVGObject>();
+            if (Image != null)
+                Objects.Add(Image);
+            lock (_RectLock)
+            {
+                if (_RectangleList != null)
+                    Objects.AddRange(_RectangleList);
+            }
+            if (drawingRect != null)
+                Objects.Add(drawingRect);
         }
-        if (drawingRect != null)
-            Objects.Add(drawingRect);
     }
     <SimpleSVG SvgId="bwz" Objects="@Objects" Context="@Context" Width="100%" Height="100%" />
 </div>
@@ -82,7 +85,7 @@
     {
         if (firstRender)
         {
-            await GetSizesAsync();
+            await LoadJSModule();
             StateHasChanged();
         }
     }
@@ -106,6 +109,7 @@
             await ContextHasChangedAsync();
             Image.href = ImageUri;
             Image.id = Guid.NewGuid().ToString();
+            Image.ClearSize();
             await CheckSizeAsync();
         }
         await InvokeAsync(StateHasChanged);
@@ -155,7 +159,47 @@
             module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorWheelZoom2/scripts.js");
     }
 
-    public async Task<bool> GetSizesAsync()
+    // [JSInvokable]
+    // public Task ImageLoaded(string size)
+    // {
+    //     var jimage = System.Text.Json.JsonDocument.Parse(size);
+    //     Image.rect = new Rect(); // To "unset" width and height
+    //     Image.rect.left = Image.rect.top = 0;
+    //     double width = jimage.RootElement.GetProperty("width").GetDouble();// non  / Context.zoom;
+    //     double height = jimage.RootElement.GetProperty("height").GetDouble(); // non / Context.zoom;
+    //     if (width > 0 && height > 0) // If null the image is not loaded yet, retry later
+    //     {
+    //         Image.rect.width = width;
+    //         Image.rect.height = height;
+    //     }
+    //     return Task.CompletedTask;
+    // }
+
+    public async Task<bool> GetSizesAsync(int retry = 10)
+    {
+        bool loaded = false;
+        do
+        {
+            loaded = !Image.rect.IsEmpty();
+            if (!loaded)
+                await Task.Delay(100);
+        }
+        while (retry-- > 0 && !loaded);
+        if (loaded)
+        {
+            var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>("GetBoundingClientRect", "bwz"));
+            Context.viewSize = new Rect()
+                {
+                    left = svg.RootElement.GetProperty("left").GetDouble(),
+                    top = svg.RootElement.GetProperty("top").GetDouble(),
+                    right = svg.RootElement.GetProperty("right").GetDouble(),
+                    bottom = svg.RootElement.GetProperty("bottom").GetDouble()
+                };
+        }
+        return loaded;
+    }
+
+    public async Task<bool> GetSizesAsync_old()
     {
         if (Context.viewSize == null)
         {
@@ -196,7 +240,7 @@
             }
         }
         bool result = Context.viewSize != null;
-        //Console.WriteLine($"GetSizesAsync = {result}");
+        // Console.WriteLine($"GetSizesAsync = {result}");
         return result;
     }
 

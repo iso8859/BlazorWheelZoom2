@@ -3,6 +3,7 @@
 <p>You can zoom using wheel button.</p>
 <p>You can scroll using the left button.</p>
 <p>You can draw rectangle using right button.</p>
+
 <div class="center">
     <BlazorWheelZoom2.WheelZoom2 @ref="ctrlRef" 
                                  ImageUri="/mire.png" 
@@ -40,7 +41,7 @@
     List<BlazorSimpleSVG.SVGRectangle> rectangles = new List<BlazorSimpleSVG.SVGRectangle>();
     void Red()
     {
-        rectangles.Add(new BlazorSimpleSVG.SVGRectangle() { rect = new BlazorSimpleSVG.rect(600, 600, 700, 700), scrollIntoView = true, fill = "#FF0000" });
+        rectangles.Add(new BlazorSimpleSVG.SVGRectangle() { rect = new BlazorSimpleSVG.Rect(600, 600, 700, 700), scrollIntoView = true, fill = "#FF0000" });
     }
 
     void InView()
