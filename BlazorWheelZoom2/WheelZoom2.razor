@@ -112,6 +112,7 @@
             Image.ClearSize();
         }
         await InvokeAsync(StateHasChanged);
+        await GetSizesAsync(); // Important pour redéssiner avec la bonne taille
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()
@@ -168,6 +169,8 @@
                     bottom = svg.RootElement.GetProperty("bottom").GetDouble()
                 };
             Context.areaSize = new Rect(0, 0, Image.rect.width.Value, Image.rect.height.Value);
+            // Fair un refresh pour afficher l'image au bon niveau de zoom
+            await ContextHasChangedAsync();
         }
         return loaded;
     }
