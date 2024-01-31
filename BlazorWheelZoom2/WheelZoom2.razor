@@ -106,40 +106,12 @@
         {
             ImageUri = img;
             Context.viewSize = null;
-            await ContextHasChangedAsync();
+            //await ContextHasChangedAsync();
             Image.href = ImageUri;
             Image.id = Guid.NewGuid().ToString();
             Image.ClearSize();
-            await CheckSizeAsync();
         }
         await InvokeAsync(StateHasChanged);
-    }
-
-    Timer timer;
-    public async Task CheckSizeAsync()
-    {
-        try
-        {
-            if (await GetSizesAsync())
-                await ContextHasChangedAsync();
-            else
-            {
-                if (timer != null)
-                    await timer.DisposeAsync();
-                timer = new Timer(async (e) =>
-                {
-                    try
-                    {
-                        await InvokeAsync(CheckSizeAsync);
-                    }
-                    catch
-                    {
-
-                    }
-                }, null, 250, Timeout.Infinite);
-            }
-        }
-        catch { }
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()
@@ -185,7 +157,7 @@
                 await Task.Delay(100);
         }
         while (retry-- > 0 && !loaded);
-        if (loaded)
+        if (loaded && (Context.viewSize == null || Context.viewSize.IsEmpty()))
         {
             var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>("GetBoundingClientRect", "bwz"));
             Context.viewSize = new Rect()
@@ -195,6 +167,7 @@
                     right = svg.RootElement.GetProperty("right").GetDouble(),
                     bottom = svg.RootElement.GetProperty("bottom").GetDouble()
                 };
+            Context.areaSize = new Rect(0, 0, Image.rect.width.Value, Image.rect.height.Value);
         }
         return loaded;
     }
@@ -259,7 +232,6 @@
             Context.x_offset = Context.Clip(Context.x_offset, Context.viewSize.width.Value - Context.Size(Image.rect.width.Value));
             Context.y_offset = Context.Clip(Context.y_offset, Context.viewSize.height.Value - Context.Size(Image.rect.height.Value));
             await ContextHasChangedAsync();
-            await InvokeAsync(StateHasChanged);
         }
     }
 

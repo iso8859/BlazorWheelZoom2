@@ -95,7 +95,17 @@ namespace BlazorSimpleSVG
     public class SVGContext
     {
         public string clip_name = "clip-path";
-        public double x_offset = 0, y_offset = 0, zoom = 1;
+        public double x_offset = 0, y_offset = 0;
+        double _zoom = 1;
+        public double zoom
+        {
+            get => _zoom;
+            set
+            {
+                _zoom = value;
+                Console.WriteLine("zoom=" + _zoom);
+            }
+        }
         public Rect viewSize; // Size of the visible part zoom 1
         public Rect areaSize; // Size of the drawing part zoom 1
 
@@ -207,12 +217,15 @@ namespace BlazorSimpleSVG
 
         public override void SetImageSize(string data)
         {
-            var jimage = System.Text.Json.JsonDocument.Parse(data);
-            rect = new Rect();
-            rect.left = 0;
-            rect.top = 0;
-            rect.width = jimage.RootElement.GetProperty("width").GetDouble();
-            rect.height = jimage.RootElement.GetProperty("height").GetDouble();
+            if (rect == null || rect.IsEmpty())
+            {
+                var jimage = System.Text.Json.JsonDocument.Parse(data);
+                rect = new Rect();
+                rect.left = 0;
+                rect.top = 0;
+                rect.width = jimage.RootElement.GetProperty("width").GetDouble();
+                rect.height = jimage.RootElement.GetProperty("height").GetDouble();
+            }
         }
     }
 }
