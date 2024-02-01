@@ -160,6 +160,7 @@
         while (retry-- > 0 && !loaded);
         if (loaded && (Context.viewSize == null || Context.viewSize.IsEmpty()))
         {
+            Context.areaSize = new Rect(0, 0, Image.rect.width.Value, Image.rect.height.Value);
             var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>("GetBoundingClientRect", "bwz"));
             Context.viewSize = new Rect()
                 {
@@ -168,7 +169,6 @@
                     right = svg.RootElement.GetProperty("right").GetDouble(),
                     bottom = svg.RootElement.GetProperty("bottom").GetDouble()
                 };
-            Context.areaSize = new Rect(0, 0, Image.rect.width.Value, Image.rect.height.Value);
             // Fair un refresh pour afficher l'image au bon niveau de zoom
             await ContextHasChangedAsync();
         }

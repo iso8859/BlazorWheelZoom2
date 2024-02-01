@@ -17,13 +17,19 @@ namespace BlazorSimpleSVG
     public class Rect
     {
         public double? left, top, right, bottom;
-
+        
         public Rect()
         {
 
         }
 
         public Rect(double _left, double _top, double _right, double _bottom)
+        {
+            
+            SetLock(_left, _top, _right, _bottom);
+        }
+
+        public void Set(double _left, double _top, double _right, double _bottom)
         {
             if (_right < _left)
             {
@@ -43,15 +49,30 @@ namespace BlazorSimpleSVG
             bottom = _bottom;
         }
 
-        public Rect NomalizedRect()
+        public void SetLock(double _left, double _top, double _right, double _bottom)
         {
-            if (left.HasValue && top.HasValue && right.HasValue && bottom.HasValue)
-                return new Rect(left.Value, top.Value, right.Value, bottom.Value);
-            else
-                return new Rect(0, 0, 0, 0);
+            lock (this)
+            {
+                Set(_left, _top, _right, _bottom);
+            }
         }
 
-        public bool IsEmpty() => !left.HasValue || !top.HasValue || !right.HasValue || !bottom.HasValue;
+        public Rect NomalizedRect()
+        {
+            lock (this)
+            {
+                if (left.HasValue && top.HasValue && right.HasValue && bottom.HasValue)
+                    return new Rect(left.Value, top.Value, right.Value, bottom.Value);
+                else
+                    return new Rect(0, 0, 0, 0);
+            }
+        }
+
+        public bool IsEmpty()
+        {
+            lock (this)
+                return !left.HasValue || !top.HasValue || !right.HasValue || !bottom.HasValue;
+        }
         public double? width
         {
             get => (right.HasValue && left.HasValue) ? (right.Value - left.Value) : null;
@@ -96,16 +117,7 @@ namespace BlazorSimpleSVG
     {
         public string clip_name = "clip-path";
         public double x_offset = 0, y_offset = 0;
-        double _zoom = 1;
-        public double zoom
-        {
-            get => _zoom;
-            set
-            {
-                _zoom = value;
-                Console.WriteLine("zoom=" + _zoom);
-            }
-        }
+        public double zoom;
         public Rect viewSize; // Size of the visible part zoom 1
         public Rect areaSize; // Size of the drawing part zoom 1
 
@@ -219,12 +231,12 @@ namespace BlazorSimpleSVG
         {
             if (rect == null || rect.IsEmpty())
             {
-                var jimage = System.Text.Json.JsonDocument.Parse(data);
                 rect = new Rect();
-                rect.left = 0;
-                rect.top = 0;
-                rect.width = jimage.RootElement.GetProperty("width").GetDouble();
-                rect.height = jimage.RootElement.GetProperty("height").GetDouble();
+                lock (rect)
+                {
+                    var jimage = System.Text.Json.JsonDocument.Parse(data);
+                    rect.Set(0, 0, jimage.RootElement.GetProperty("width").GetDouble(), jimage.RootElement.GetProperty("height").GetDouble());
+                }
             }
         }
     }
