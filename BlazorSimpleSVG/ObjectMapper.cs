@@ -9,8 +9,8 @@ namespace BlazorSimpleSVG
 {
     public class ObjectRef<T>
     {
-        public string Id { get; set; }
-        public T Instance { get; set; }
+        public string? Id { get; set; }
+        public T? Instance { get; set; }
         public DateTime? Expiration { get; set; }
     }
 
@@ -29,13 +29,16 @@ namespace BlazorSimpleSVG
         }
         public void AddOrUpdate(ObjectRef<T> obj)
         {
-            PurgeExpired();
-            if (!obj.Expiration.HasValue)
-                obj.Expiration = DateTime.Now + m_expiration;
-            m_objects.AddOrUpdate(obj.Id, obj, (key, oldValue) => obj);
+            if (obj.Id != null)
+            {
+                PurgeExpired();
+                if (!obj.Expiration.HasValue)
+                    obj.Expiration = DateTime.Now + m_expiration;
+                m_objects.AddOrUpdate(obj.Id, obj, (key, oldValue) => obj);
+            }
         }
 
-        public T Get(string id)
+        public T? Get(string id)
         {
             if (m_objects.TryGetValue(id, out var obj))
                 return obj.Instance;

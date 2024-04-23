@@ -161,7 +161,7 @@ namespace BlazorSimpleSVG
         static public readonly string _none = "none";
         static public readonly string _fillopacity = "1";
 
-        public string id;
+        public string? id;
         public Rect rect = new Rect();
         public bool scrollIntoView = false;
         public bool visible = true;
