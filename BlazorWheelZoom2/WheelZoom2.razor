@@ -250,7 +250,10 @@
         }
     }
 
-    long mouseDown = -1;
+    // We will use PointerEventArgs.Buttons that always send the current button state
+    // 1 = left button
+    // 2 = right button
+    // long mouseDown = -1;
     double mouseDownX, mouseDownY;
     double mouseDownImageX, mouseDownImageY;
 
@@ -262,11 +265,10 @@
         pointList.Add(e);
         if (await GetSizesAsync())
         {
-            if (mouseDown == -1)
+            if (e.Buttons != 0)
             {
-                if (e.Button == 0 || e.Button == 2)
+                if (e.Buttons == 1 || e.Buttons == 2)
                 {
-                    mouseDown = e.Button;
                     mouseDownX = e.OffsetX;
                     mouseDownY = e.OffsetY;
                     mouseDownImageX = Context.x_offset;
@@ -274,7 +276,7 @@
                     await LoadJSModule();
                     await module.InvokeVoidAsync("capturePointer", divElement, e.PointerId);
                 }
-                if (e.Button == 2)
+                if (e.Buttons == 2)
                 {
                     drawingRect.rect.left = Context.ScreenToViewX(e.OffsetX);
                     drawingRect.rect.top = Context.ScreenToViewY(e.OffsetY);
@@ -300,7 +302,7 @@
         if (pointList.Count < 2)
             prevDist = null;
 
-        if (mouseDown == 2)
+        if (e.Buttons == 2)
         {
             if (NewRectangle.HasDelegate)
                 await NewRectangle.InvokeAsync(drawingRect);
@@ -308,9 +310,8 @@
             drawingRect = new SVGRectangle() { visible = false };
             Objects.Add(drawingRect);
         }
-        if (mouseDown == 0 || mouseDown == 2)
+        if (e.Buttons == 1 || e.Buttons == 2)
         {
-            mouseDown = -1;
             await LoadJSModule();
             await module.InvokeVoidAsync("releasePointer", divElement, e.PointerId);
         }
@@ -325,13 +326,13 @@
 
         if (await GetSizesAsync())
         {
-            if (mouseDown == 0 && Image.rect.width.HasValue && Image.rect.height.HasValue)
+            if (e.Buttons == 1 && Image.rect.width.HasValue && Image.rect.height.HasValue)
             {
                 Context.x_offset = Context.Clip(mouseDownImageX + e.OffsetX - mouseDownX, Context.viewSize.width.Value - Context.Size(Image.rect.width.Value));
                 Context.y_offset = Context.Clip(mouseDownImageY + e.OffsetY - mouseDownY, Context.viewSize.height.Value - Context.Size(Image.rect.height.Value));
                 await ContextHasChangedAsync();
             }
-            else if (mouseDown == 2)
+            else if (e.Buttons == 2)
             {
                 drawingRect.rect.right = drawingRect.rect.left + Context.ScreenToViewX(mouseDownImageX + e.OffsetX - mouseDownX);
                 drawingRect.rect.bottom = drawingRect.rect.top + Context.ScreenToViewY(mouseDownImageY + e.OffsetY - mouseDownY);
