@@ -253,7 +253,7 @@
     // We will use PointerEventArgs.Buttons that always send the current button state
     // 1 = left button
     // 2 = right button
-    // long mouseDown = -1;
+    long mouseDown = -1;
     double mouseDownX, mouseDownY;
     double mouseDownImageX, mouseDownImageY;
 
@@ -262,6 +262,7 @@
 
     async Task PointerDown(PointerEventArgs e)
     {
+        mouseDown = e.Buttons;
         pointList.Add(e);
         if (await GetSizesAsync())
         {
@@ -302,7 +303,7 @@
         if (pointList.Count < 2)
             prevDist = null;
 
-        if (e.Buttons == 2)
+        if (mouseDown == 2)
         {
             if (NewRectangle.HasDelegate)
                 await NewRectangle.InvokeAsync(drawingRect);
@@ -310,16 +311,18 @@
             drawingRect = new SVGRectangle() { visible = false };
             Objects.Add(drawingRect);
         }
-        if (e.Buttons == 1 || e.Buttons == 2)
+        if (mouseDown == 1 || mouseDown == 2)
         {
             await LoadJSModule();
             await module.InvokeVoidAsync("releasePointer", divElement, e.PointerId);
         }
+        mouseDown = -1;
     }
 
     double? prevDist = null;
     async Task PointerMove(PointerEventArgs e)
     {
+        mouseDown = e.Buttons;
         int idx = pointList.FindIndex(_ => _.PointerId == e.PointerId);
         if (idx != -1)
             pointList[idx] = e;
