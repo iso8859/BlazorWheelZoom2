@@ -8,7 +8,7 @@
 <div @ref="divElement" style="position:relative;width:@Width;height:@Height;"
      @onpointerdown=PointerDown @onpointerdown:preventDefault @onpointerdown:stopPropagation
      @onpointerup=PointerUp @onpointerup:preventDefault @onpointerup:stopPropagation
-     @oncontextmenu="()=> { }" @oncontextmenu:preventDefault
+     @oncontextmenu="() => { }" @oncontextmenu:preventDefault
      @onpointermove=PointerMove @onpointermove:preventDefault
      @onwheel=Wheel @onwheel:stopPropagation
      @ontouchstart:stopPropagation @ontouchstart:preventDefault
@@ -163,12 +163,12 @@
             Context.areaSize = new Rect(0, 0, Image.rect.width.Value, Image.rect.height.Value);
             var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>("GetBoundingClientRect", "bwz"));
             Context.viewSize = new Rect()
-                {
-                    left = svg.RootElement.GetProperty("left").GetDouble(),
-                    top = svg.RootElement.GetProperty("top").GetDouble(),
-                    right = svg.RootElement.GetProperty("right").GetDouble(),
-                    bottom = svg.RootElement.GetProperty("bottom").GetDouble()
-                };
+            {
+                left = svg.RootElement.GetProperty("left").GetDouble(),
+                top = svg.RootElement.GetProperty("top").GetDouble(),
+                right = svg.RootElement.GetProperty("right").GetDouble(),
+                bottom = svg.RootElement.GetProperty("bottom").GetDouble()
+            };
             // Fair un refresh pour afficher l'image au bon niveau de zoom
             await ContextHasChangedAsync();
         }
@@ -195,12 +195,12 @@
                 Image.rect.height = height;
                 var svg = System.Text.Json.JsonDocument.Parse(await module.InvokeAsync<string>("GetBoundingClientRect", "bwz"));
                 Context.viewSize = new Rect()
-                    {
-                        left = svg.RootElement.GetProperty("left").GetDouble(),
-                        top = svg.RootElement.GetProperty("top").GetDouble(),
-                        right = svg.RootElement.GetProperty("right").GetDouble(),
-                        bottom = svg.RootElement.GetProperty("bottom").GetDouble()
-                    };
+                {
+                    left = svg.RootElement.GetProperty("left").GetDouble(),
+                    top = svg.RootElement.GetProperty("top").GetDouble(),
+                    right = svg.RootElement.GetProperty("right").GetDouble(),
+                    bottom = svg.RootElement.GetProperty("bottom").GetDouble()
+                };
                 // il semble que parfois une des valeurs est absente
                 // System.InvalidOperationException: Nullable object must have a value.
                 // at System.Nullable`1.get_Value()
@@ -326,6 +326,14 @@
         int idx = pointList.FindIndex(_ => _.PointerId == e.PointerId);
         if (idx != -1)
             pointList[idx] = e;
+
+        if (mouseDown == 0)
+        {
+            // Faire comme un PointerUp, parfoit on ne reçoit pas le PointerUp
+            pointList.Remove(pointList.Find(_ => _.PointerId == e.PointerId));
+            if (pointList.Count < 2)
+                prevDist = null;
+        }
 
         if (await GetSizesAsync())
         {
