@@ -33,7 +33,7 @@
                 Objects.Add(drawingRect);
         }
     }
-    <SimpleSVG SvgId="bwz" Objects="@Objects" Context="@Context" Width="100%" Height="100%" />
+    <SimpleSVG SvgId="bwz" Objects="@Objects" Context="@Context" Width="100%" Height="100%" Rotation="@Rotation" />
 </div>
 
 @code
@@ -46,6 +46,8 @@
     public string Width { get; set; } = "100px";
     [Parameter]
     public string Height { get; set; } = "100px";
+    [Parameter]
+    public double Rotation { get; set; } = 0;
     [Parameter]
     public EventCallback<SVGRectangle> NewRectangle { get; set; }
     [Parameter]
@@ -75,6 +77,7 @@
     protected override void OnInitialized()
     {
         Context.zoom = 1; // The zoom must start at 1 so we can determine the image size
+        Context.rotation = Rotation;
         Image = new SVGImage() { id = Guid.NewGuid().ToString(), href = ImageUri };
         Objects.Add(Image);
         drawingRect = new SVGRectangle() { visible = false };
@@ -88,6 +91,7 @@
             await LoadJSModule();
             StateHasChanged();
         }
+        Context.rotation = Rotation;
     }
 
     private IJSObjectReference module;
@@ -106,7 +110,7 @@
         {
             ImageUri = img;
             Context.viewSize = null;
-            //await ContextHasChangedAsync();
+            Context.rotation = Rotation;
             Image.href = ImageUri;
             Image.id = Guid.NewGuid().ToString();
             Image.ClearSize();
@@ -371,5 +375,11 @@
     {
         //Console.WriteLine(JsonSerializer.Serialize(e));
         return Task.CompletedTask;
+    }
+
+    public void SetRotation(double angle)
+    {
+        Rotation = angle;
+        StateHasChanged();
     }
 }

@@ -117,14 +117,16 @@ namespace BlazorSimpleSVG
     {
         public string clip_name = "clip-path";
         public double x_offset = 0, y_offset = 0;
-        public double zoom;
+        public double zoom = 1;
+        public double rotation = 0; // Degrees
         public Rect viewSize; // Size of the visible part zoom 1
         public Rect areaSize; // Size of the drawing part zoom 1
 
         public override string ToString()
         {
-            return $"x_offset={x_offset};y_offset={y_offset};zoom={zoom};viewSize={viewSize};areaSize={areaSize}";
+            return $"x_offset={x_offset};y_offset={y_offset};zoom={zoom};rotation={rotation};viewSize={viewSize};areaSize={areaSize}";
         }
+        
         public double Clip(double i, double minOffset)
         {
             return Math.Min(0, Math.Max(i, minOffset));
@@ -134,6 +136,7 @@ namespace BlazorSimpleSVG
         {
             x_offset = y_offset = 0;
             zoom = 1;
+            rotation = 0;
         }
 
         public bool IsValid()
@@ -141,16 +144,174 @@ namespace BlazorSimpleSVG
             return viewSize != null && areaSize != null;
         }
 
-        public double ScreenToViewX(double i) => (i - x_offset) / zoom;
-        public double ScreenToViewY(double i) => (i - y_offset) / zoom;
-        public string TranslateX(double x) => (x_offset + (x * zoom)).ToStringInvariant();
-        public string TranslateY(double y) => (y_offset + (y * zoom)).ToStringInvariant();
+        /// <summary>
+        /// Définit la rotation en degrés
+        /// </summary>
+        public void SetRotation(double degrees)
+        {
+            rotation = degrees % 360;
+            if (rotation < 0)
+                rotation += 360;
+        }
+
+        /// <summary>
+        /// Fait pivoter de 90 degrés dans le sens horaire
+        /// </summary>
+        public void RotateClockwise()
+        {
+            SetRotation(rotation + 90);
+        }
+
+        /// <summary>
+        /// Fait pivoter de 90 degrés dans le sens antihoraire
+        /// </summary>
+        public void RotateCounterClockwise()
+        {
+            SetRotation(rotation - 90);
+        }
+
+        /// <summary>
+        /// Convertit des degrés en radians
+        /// </summary>
+        private double DegreesToRadians(double degrees) => degrees * Math.PI / 180.0;
+
+        /// <summary>
+        /// Obtient le centre de rotation basé sur areaSize
+        /// </summary>
+        private (double centerX, double centerY) GetRotationCenter()
+        {
+            if (areaSize != null && !areaSize.IsEmpty())
+            {
+                return (areaSize.width.Value / 2.0, areaSize.height.Value / 2.0);
+            }
+            return (0, 0);
+        }
+
+        /// <summary>
+        /// Applique la transformation de rotation à un point
+        /// </summary>
+        private (double x, double y) ApplyRotation(double x, double y)
+        {
+            if (rotation == 0)
+                return (x, y);
+
+            var (centerX, centerY) = GetRotationCenter();
+            double radians = DegreesToRadians(rotation);
+            double cos = Math.Cos(radians);
+            double sin = Math.Sin(radians);
+
+            // Translate to origin
+            double translatedX = x - centerX;
+            double translatedY = y - centerY;
+
+            // Rotate
+            double rotatedX = translatedX * cos - translatedY * sin;
+            double rotatedY = translatedX * sin + translatedY * cos;
+
+            // Translate back
+            return (rotatedX + centerX, rotatedY + centerY);
+        }
+
+        /// <summary>
+        /// Applique la transformation inverse de rotation à un point
+        /// </summary>
+        private (double x, double y) ApplyInverseRotation(double x, double y)
+        {
+            if (rotation == 0)
+                return (x, y);
+
+            var (centerX, centerY) = GetRotationCenter();
+            double radians = DegreesToRadians(-rotation); // Inverse rotation
+            double cos = Math.Cos(radians);
+            double sin = Math.Sin(radians);
+
+            // Translate to origin
+            double translatedX = x - centerX;
+            double translatedY = y - centerY;
+
+            // Rotate
+            double rotatedX = translatedX * cos - translatedY * sin;
+            double rotatedY = translatedX * sin + translatedY * cos;
+
+            // Translate back
+            return (rotatedX + centerX, rotatedY + centerY);
+        }
+
+        public double ScreenToViewX(double i)
+        {
+            double viewX = (i - x_offset) / zoom;
+            if (rotation != 0)
+            {
+                var (x, _) = ApplyInverseRotation(viewX, 0);
+                return x;
+            }
+            return viewX;
+        }
+
+        public double ScreenToViewY(double i)
+        {
+            double viewY = (i - y_offset) / zoom;
+            if (rotation != 0)
+            {
+                var (_, y) = ApplyInverseRotation(0, viewY);
+                return y;
+            }
+            return viewY;
+        }
+
+        public string TranslateX(double x)
+        {
+            if (rotation != 0)
+            {
+                var (rotatedX, _) = ApplyRotation(x, 0);
+                return (x_offset + (rotatedX * zoom)).ToStringInvariant();
+            }
+            return (x_offset + (x * zoom)).ToStringInvariant();
+        }
+
+        public string TranslateY(double y)
+        {
+            if (rotation != 0)
+            {
+                var (_, rotatedY) = ApplyRotation(0, y);
+                return (y_offset + (rotatedY * zoom)).ToStringInvariant();
+            }
+            return (y_offset + (y * zoom)).ToStringInvariant();
+        }
+
+        /// <summary>
+        /// Génère la chaîne de transformation SVG complète (zoom + rotation)
+        /// </summary>
+        public string GetTransformString()
+        {
+            if (rotation == 0)
+                return string.Empty;
+
+            var (centerX, centerY) = GetRotationCenter();
+            double scaledCenterX = x_offset + (centerX * zoom);
+            double scaledCenterY = y_offset + (centerY * zoom);
+
+            return $"rotate({rotation.ToStringInvariant()} {scaledCenterX.ToStringInvariant()} {scaledCenterY.ToStringInvariant()})";
+        }
+
         public double Size(double i) => i * zoom;
+        
         public string Size_s(double i) => (i * zoom).ToStringInvariant();
+        
         public void EnsureIsVisible(Rect area)
         {
-            x_offset = Clip(Size(-area.left.Value + 10), viewSize.width.Value - Size(areaSize.width.Value));
-            y_offset = Clip(Size(-area.top.Value + 10), viewSize.height.Value - Size(areaSize.height.Value));
+            if (rotation != 0)
+            {
+                // Appliquer la rotation à la zone avant de calculer la visibilité
+                var (rotatedLeft, rotatedTop) = ApplyRotation(area.left.Value, area.top.Value);
+                x_offset = Clip(Size(-rotatedLeft + 10), viewSize.width.Value - Size(areaSize.width.Value));
+                y_offset = Clip(Size(-rotatedTop + 10), viewSize.height.Value - Size(areaSize.height.Value));
+            }
+            else
+            {
+                x_offset = Clip(Size(-area.left.Value + 10), viewSize.width.Value - Size(areaSize.width.Value));
+                y_offset = Clip(Size(-area.top.Value + 10), viewSize.height.Value - Size(areaSize.height.Value));
+            }
         }
     }
 
@@ -184,9 +345,8 @@ namespace BlazorSimpleSVG
         public string fill_opacity = _fillopacity;
         public override string GetSVG(SimpleSVG instance, SVGContext context)
         {
-            // To avoi negative size rect
+            // To avoid negative size rect
             var tmp = $"<rect {GetId()} x='{context.TranslateX(rect.left.Value)}' y='{context.TranslateY(rect.top.Value)}' width='{context.Size_s(Math.Abs(rect.width.Value))}' height='{context.Size_s(Math.Abs(rect.height.Value))}' fill='{fill}' fill-opacity='{fill_opacity}' stroke='{color}' stroke-width='1'/>";
-            //Console.WriteLine("SVGRectangle zoom =" + context.zoom);
             return tmp;
         }
 
