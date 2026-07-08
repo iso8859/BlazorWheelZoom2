@@ -242,8 +242,13 @@
         }
     }
 
+//    DateTime lastWheel = DateTime.MinValue;
+
     async Task Wheel(WheelEventArgs e)
     {
+        // if ((DateTime.Now - lastWheel).TotalMilliseconds < 100)
+        //     return;
+        // lastWheel = DateTime.Now;
         if (await GetSizesAsync())
         {
             if (e.DeltaY > 0)
