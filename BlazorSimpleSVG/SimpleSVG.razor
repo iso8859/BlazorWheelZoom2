@@ -16,9 +16,13 @@
             }
             @foreach (var obj in Objects)
             {
-                @if (obj.visible)
+                if (obj.visible)
                 {
-                    @((MarkupString)obj.GetSVG(this, Context))
+                    @* Each object is isolated in its own keyed <g> so Blazor never has to
+                       diff raw MarkupString nodes next to structured siblings. Mixing both
+                       under the same element desynchronises the render tree from the DOM and
+                       causes "Cannot read properties of null (reading 'removeChild')". *@
+                    <g @key="obj">@((MarkupString)obj.GetSVG(this, Context))</g>
                 }
             }
         </svg>
@@ -40,32 +44,42 @@
     public double Rotation { get; set; } = 0;
 
     private IJSObjectReference? module;
+    private bool disposed;
 
     public static ObjectMapper<SVGObject> objectMapper = new ObjectMapper<SVGObject>();
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
+        disposed = true;
+        var m = module;
+        module = null;
         try
         {
-            if (module != null)
-                await module.DisposeAsync();
-            module = null;
+            if (m != null)
+                await m.DisposeAsync();
         }
+        catch (JSDisconnectedException) { }
+        catch (ObjectDisposedException) { }
+        catch (TaskCanceledException) { }
+        catch (JSException) { }
         catch { }
     }
 
     public async Task LoadJSModule()
     {
-        if (module == null)
+        if (module == null && !disposed)
             module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorSimpleSVG/SimpleSVG.razor.js");
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (disposed)
+            return;
         if (firstRender)
         {
             await LoadJSModule();
-            StateHasChanged();
+            if (!disposed)
+                StateHasChanged();
         }
     }
 
